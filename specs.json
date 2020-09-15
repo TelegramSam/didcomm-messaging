@@ -1,6 +1,7 @@
 
 {
-  "resource_path": "./docs/spec",
+  "public_root": "./docs",
+  "resource_path": "./docs",
   "specs": [
     {
       "title": "DIDComm Messaging Specification",
