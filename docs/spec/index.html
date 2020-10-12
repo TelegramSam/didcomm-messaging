@@ -55,40 +55,36 @@
 <p>Other robust mechanisms for secure communication already exist. However, most rely on key registries, identity providers, certificate authorities, browser or app vendors, or similarly centralized assumptions. They also tend to be tied to a single transport, making it difficult to use the same solution for human and machine conversations, online and offline, simplex and duplex, across a broad set of modalities. The net result is that they perpetuate an asymmetry between institutions and ordinary people. The former maintain certificates and always-connected servers, and publish APIs under terms and conditions they dictate; the latter suffer with usernames and passwords, poor interoperability, and a Hobson’s choice between privacy and convenience.</p>
 <p>DIDComm can fix this. Using DIDComm, individuals on semi-connected mobile devices become full peers of highly available web servers operated by IT experts. Registration is self-service, intermediaries require little trust, and no terms and conditions apply.</p>
 <p>DIDComm enables higher-order protocols that inherit its security, privacy, decentralization, and transport independence. Examples include exchanging verifiable credentials, creating and maintaining relationships, buying and selling, scheduling events, negotiating contracts, voting, presenting tickets for travel, applying to employers or schools or banks, arranging healthcare, and playing games. Like web services atop HTTP, the possibilities are endless; unlike web services atop HTTP, many parties can participate without being clients of a central server, and they can use a mixture of connectivity models and technologies.</p>
-<h3 id="rough-overview"><a class="toc-anchor" href="#rough-overview">§</a> Rough Overview</h3>
-<p>A typical DIDComm interaction works like this:</p>
-<blockquote>
-<p>Imagine Alice wants to negotiate with Bob to sell something online, and that DIDComm, not direct human communication, is involved. This means Alice’s agent and Bob’s agent are going to exchange a series of messages.</p>
-<p>Alice may just press a button and be unaware of details, but underneath, her agent begins by preparing a plaintext JSON message about the proposed sale. (The particulars are irrelevant here, but would be described in the spec for a “sell something” protocol.) It then looks up Bob’s DID Doc to access two key pieces of information:</p>
+<h3 id="overview"><a class="toc-anchor" href="#overview">§</a> Overview</h3>
+<p>To understand how DIDComm works, consider a situation where Alice wants to negotiate with Bob to sell something online. Because DIDComm, not direct human communication, is the methodology in this example, Alice’s software agent and Bob’s software agent are going to exchange a series of messages.</p>
+<p>Alice may just press a button and be unaware of details, but underneath, her agent begins by preparing a plaintext JSON message about the proposed sale. (The particulars are irrelevant here, but would be described in the spec for a higher-level “sell something” protocol that takes DIDComm as its foundation.) Alice’s agent then looks up Bob’s DID Doc to access two key pieces of information:</p>
 <ul>
 <li>An endpoint (web, email, etc) where messages can be delivered to Bob.</li>
 <li>The public key that Bob’s agent is using in the Alice:Bob relationship.</li>
 </ul>
-<p>Now Alice’s agent uses Bob’s public key to encrypt the plaintext so that only Bob’s agent can read it, adding authentication with its own private key. The agent arranges delivery to Bob. This “arranging” can involve various hops and intermediaries. It can be complex.</p>
-<p>Bob’s agent eventually receives and decrypts the message, authenticating its origin as Alice using her public key. It prepares its response and routes it back using a reciprocal process (plaintext -&gt; lookup endpoint and public key for Alice -&gt; encrypt with authentication -&gt; arrange delivery).</p>
-</blockquote>
-<p>That’s it.</p>
-<p>Well, mostly. The description is pretty good, if you squint, but it does not fit all DIDComm interactions:</p>
+<p>Now Alice’s agent uses Bob’s public key to encrypt the plaintext so that only Bob’s agent can read it, adding authentication with its own private key. The agent arranges delivery to Bob. This “arranging” can involve various hops and intermediaries. It can be complex. (See <a href="/guide#routing">Routing in the Implementers Guide</a>.)</p>
+<p>Bob’s agent eventually receives and decrypts the message, authenticating its origin as Alice using her public key. It prepares its response and routes it back using a reciprocal process (plaintext → lookup endpoint and public key for Alice → encrypt with authentication → arrange delivery).</p>
+<p>That’s the essence, in the most common scenarios. However, it does not fit all DIDComm interactions:</p>
 <ul>
 <li>DIDComm doesn’t always involve turn-taking and request-response.</li>
 <li>DIDComm interactions can involve more than 2 parties, and the parties are not always individuals.</li>
 <li>DIDComm may include formats other than JSON.</li>
 </ul>
 <p>Before we provide more details, let’s explore what drives the design of DIDComm.</p>
-<h3 id="goals-and-ramifications"><a class="toc-anchor" href="#goals-and-ramifications">§</a> Goals and Ramifications</h3>
+<h3 id="specific-requirements"><a class="toc-anchor" href="#specific-requirements">§</a> Specific Requirements</h3>
 <p>The DIDComm design attempts to be:</p>
 <ol>
-<li><strong>Secure</strong></li>
-<li><strong>Private</strong></li>
-<li><strong>Interoperable</strong></li>
-<li><strong>Transport-agnostic</strong></li>
-<li><strong>Extensible</strong></li>
+<li><strong>Secure</strong> (tamper-proof; uses best-of-breed crypto; allows parties to talk both on and off the record…)</li>
+<li><strong>Private</strong> (third parties can’t learn who’s communicating about what, when; lets sender be anonymous to recipient)</li>
+<li><strong>Decentralized</strong> (derives trust for encryption, signing, authn, and authz from control of DIDs rather than oracles like CAs, IDPs, etc; usable at the edge)</li>
+<li><strong>Transport-agnostic</strong> (usable over HTTPS 1.x and 2.0, WebSockets, BlueTooth, chat, push notifications, AMQP, SMTP, NFC, sneakernet, snail mail; supports both simplex and duplex; works offline; doesn’t assume client-server or synchronous or real-time; allows paired or n-wise or public broadcast usage)</li>
+<li><strong>Routable</strong> (like email, A can talk to B without a direct connection to B; allows mixed and dynamic transports; passes through mix networks and other generic infrastructure that sees only payload BLOBs)</li>
+<li><strong>Interoperable</strong> (works across programming languages, blockchains, vendors, OS/platforms, networks, legal jurisdictions, geos, cryptographies, and hardware–as well as across time; avoids vendor lock-in)</li>
+<li><strong>Extensible</strong> (lets devs start simple without heavy learning or dependencies; customize easily; facilitates higher-level protocols that inherit DIDComm’s guarantees)</li>
+<li><strong>Efficient</strong> (doesn’t waste bandwidth, battery, storage space, or CPU)</li>
 </ol>
-<p>As a list of buzz words, this may elicit nods rather than surprise. However, several items have deep ramifications.</p>
-<p>Taken together, <em>Secure</em> and <em>Private</em> require that the protocol be decentralized and maximally opaque to the surveillance economy.</p>
-<p><em>Interoperable</em> means that DIDComm should work across programming languages, blockchains, vendors, OS/platforms, networks, legal jurisdictions, geos, cryptographies, and hardware–as well as across time. That’s quite a list. It means that DIDComm intends something more than just compatibility within any specific project; it aims to be a future-proof <em>lingua franca</em> of all self-sovereign interactions.</p>
-<p><em>Transport-agnostic</em> means that it should be possible to use DIDComm over HTTP(S) 1.x and 2.0, WebSockets, IRC, Bluetooth, AMQP, NFC, Signal, email, push notifications to mobile devices, Ham radio, multicast, snail mail, carrier pigeon, and more.</p>
-<p>All software design involves tradeoffs. These goals, prioritized as shown, lead down an interesting path.</p>
+<h3 id="ramifications"><a class="toc-anchor" href="#ramifications">§</a> Ramifications</h3>
+<p>As a list of buzz words, this may elicit nods rather than surprise. However, design tradeoffs are inevitable, and several of these items have noteworthy ramifications.</p>
 <h4 id="message-based-asynchronous-and-simplex"><a class="toc-anchor" href="#message-based-asynchronous-and-simplex">§</a> Message-Based, Asynchronous, and Simplex</h4>
 <p>The dominant paradigm in mobile and web development today is duplex request-response. You call an API with certain inputs, and you get back a response with certain outputs over the same channel, shortly thereafter. This is the world of <a href="https://swagger.io/docs/specification/about/">OpenAPI (Swagger)</a>, and it has many virtues.</p>
 <p>Unfortunately, many agents are not good analogs to web servers. They may be mobile devices that turn off at unpredictable intervals and that lack a stable connection to the network. They may need to work peer-to-peer, when the internet is not available. They may need to interact in time frames of hours or days, not with 30-second timeouts. They may not listen over the same channel that they use to talk.</p>
@@ -98,45 +94,6 @@
 <p>The security and privacy goals, and the asynchronous+simplex design decision, break familiar web assumptions in another way. Servers are commonly run by institutions, and we authenticate them with certificates. People and things are usually authenticated to servers by some sort of login process quite different from certificates, and this authentication is cached in a session object that expires. Furthermore, web security is provided at the transport level (TLS); it is not an independent attribute of the messages themselves.</p>
 <p>In a partially disconnected world where a communication channel is not assumed to support duplex request-response, and where the security can’t be ignored as a transport problem, traditional TLS, login, and expiring sessions are impractical. Furthermore, centralized servers and certificate authorities perpetuate a power and UX imbalance between servers and clients that doesn’t fit with the peer-oriented DIDComm.</p>
 <p>DIDComm uses public key cryptography, not certificates from some parties and passwords from others. Its security guarantees are independent of the transport over which it flows. It is sessionless (though sessions can <em>easily</em> be built atop it). When authentication is required, all parties do it the same way.</p>
-<h2 id="requirements"><a class="toc-anchor" href="#requirements">§</a> Requirements</h2>
-<ul>
-<li>
-<p><strong>decentralized/self-sovereign</strong> (encryption, signing, authn, and authz should all be based on control of DIDs rather than on CAs, IDPs, etc)</p>
-</li>
-<li>
-<p><strong>transport independent</strong> (HTTPS, bluetooth, AMQP, SMTP, NFC, and so forth)</p>
-</li>
-<li>
-<p><strong>routable</strong> (like email, A can talk to B without a direct connection to B, by requesting that a message be forwarded–needed to mix and match transports; also, could pass through a mix network or other infrastructure that isn’t aware of it as anything other than blobs to be moved)</p>
-</li>
-<li>
-<p><strong>secure</strong> (tamper-proof, MITM impossible, composed of primitives widely considered best practice, vetted by experts, has formal security proofs, security guarantees of a given message are known)</p>
-</li>
-<li>
-<p><strong>private</strong> (third parties can’t learn who’s communicating about what, when–broader than “confidentiality” in Confidentiality, Integrity, Authenticity (CIA) because metadata like timing and identities of parties is also protected; also, possible for a sender to be anonymous to recipient)</p>
-</li>
-<li>
-<p><strong>asynchronous</strong> (can’t require real-time participation by a party; like email in that parties can communicate when they want)</p>
-</li>
-<li>
-<p><strong>supports simplex and duplex</strong> (can’t assume response uses the same channel as request–but allows request~response where desirable)</p>
-</li>
-<li>
-<p><strong>supports repudiable and non-repudiable</strong> (parties can talk off or on the record, as appropriate)</p>
-</li>
-<li>
-<p><strong>platform-independent</strong> (usable on embedded, not just servers+desktops+mobile)</p>
-</li>
-<li>
-<p><strong>composable</strong> (pick the crypto suite and features you need, without incurring overwhelming dependencies for stuff you don’t)</p>
-</li>
-<li>
-<p><strong>pairwise, nwise, anywise</strong> (communicate between 2 parties, or between N parties, or to the whole world)</p>
-</li>
-<li>
-<p><strong>efficient</strong> (doesn’t waste bandwidth, storage space, cpu, etc)</p>
-</li>
-</ul>
 <h3 id="processing-model"><a class="toc-anchor" href="#processing-model">§</a> Processing Model</h3>
 <ul>
 <li>Message-oriented, with sender and receiver(s)</li>
@@ -780,10 +737,129 @@ http://example.com/protocols/lets_do_lunch/1.0/proposal
 did:example:1234567890;spec/trust_ping/1.0/ping
 https://github.com/hyperledger/aries-toolbox/tree/master/docs/admin-invitations/0.1/create-invitation
 </code></pre>
+<h1 id="discover-features-protocol-10"><a class="toc-anchor" href="#discover-features-protocol-10">§</a> Discover Features Protocol 1.0</h1>
+<h2 id="summary-2"><a class="toc-anchor" href="#summary-2">§</a> Summary</h2>
+<p>Describes how agents can query one another to discover which features
+it supports, and to what extent.</p>
+<h2 id="motivation"><a class="toc-anchor" href="#motivation">§</a> Motivation</h2>
+<p>Though some agents will support just one protocol and will be
+statically configured to interact with just one other party, many
+exciting uses of agents are more dynamic and unpredictable. When
+Alice and Bob meet, they won’t know in advance which features are
+supported by one another’s agents. They need a way to find out.</p>
+<h2 id="reference-2"><a class="toc-anchor" href="#reference-2">§</a> Reference</h2>
+<p>This RFC introduces a protocol for discussing the protocols an agent
+can handle. The identifier for the message family used by this protocol is
+<code>discover-features</code>, and the fully qualified URI for its definition is:</p>
+<pre><code>https://didcomm.org/discover-features/1.0
+</code></pre>
+<h3 id="roles-2"><a class="toc-anchor" href="#roles-2">§</a> Roles</h3>
+<p>There are two roles in the <code>discover-features</code> protocol: <code>requester</code> and
+<code>responder</code>. The requester asks the responder about the protocols it
+supports, and the responder answers. Each role uses a single message type.</p>
+<h3 id="states-2"><a class="toc-anchor" href="#states-2">§</a> States</h3>
+<p>This is a classic two-step request~response interaction, so it uses the
+predefined state machines for any <code>requester</code> and <code>responder</code>:</p>
+<p><a href="https://docs.google.com/spreadsheets/d/1smY8qhG1qqGs0NH9g2hV4b7mDqrM6MIsmNI93tor2qk/edit"><img src="state-machines.png" alt="state machines"></a></p>
+<h3 id="messages-3"><a class="toc-anchor" href="#messages-3">§</a> Messages</h3>
+<h5 id="query-message-type"><a class="toc-anchor" href="#query-message-type">§</a> <code>query</code> Message Type</h5>
+<p>A <code>discover-features/query</code> message looks like this:</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+    <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/discover-features/1.0/query"</span><span class="token punctuation">,</span>
+    <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"yWd8wfYzhmuXX3hmLNaV5bVbAjbWaU"</span><span class="token punctuation">,</span>
+    <span class="token property">"body"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"query"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/tictactoe/1.*"</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Query messages say, “Please tell me what your capabilities are with
+respect to the protocols that match this string.” This particular example
+asks if another agent knows any 1.x versions of the tictactoe protocol.</p>
+<p>The <code>query</code> field may use the * wildcard. By itself, a query with just
+the wildcard says, “I’m interested in anything you want to share with
+me.” But usually, this wildcard will be to match a prefix that’s a little
+more specific, as in the example that matches any 1.x version.</p>
+<p>Any agent may send another agent this message type at any time.
+Implementers of agents that intend to support dynamic relationships
+and rich features are <em>strongly</em> encouraged to implement support
+for this message, as it is likely to be among the first messages
+exchanged with a stranger.</p>
+<h5 id="disclose-message-type"><a class="toc-anchor" href="#disclose-message-type">§</a> <code>disclose</code> Message Type</h5>
+<p>A <code>discover-features/disclose</code> message looks like this:</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+    <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/discover-features/1.0/disclose"</span><span class="token punctuation">,</span>
+    <span class="token property">"thread_id"</span><span class="token operator">:</span> <span class="token string">"yWd8wfYzhmuXX3hmLNaV5bVbAjbWaU"</span><span class="token punctuation">,</span>
+    <span class="token property">"body"</span><span class="token operator">:</span><span class="token punctuation">{</span>
+        <span class="token property">"protocols"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token punctuation">{</span>
+                <span class="token property">"ptid"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/tictactoe/1.0"</span><span class="token punctuation">,</span>
+                <span class="token property">"roles"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"player"</span><span class="token punctuation">]</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The <code>protocols</code> field is a JSON array of <strong>protocol support descriptor</strong>
+objects that match the query. Each descriptor has a <code>pid</code> that contains
+a protocol version (fully qualified message family identifier such as
+<code>https://didcomm.org/tictactoe/1.0</code>), plus a <code>roles</code>
+array that enumerates the roles the responding agent
+can play in the associated protocol.</p>
+<p>Response messages say, “Here are some protocols I support that matched
+your query, and some things I can do with each one.”</p>
+<h5 id="sparse-responses"><a class="toc-anchor" href="#sparse-responses">§</a> Sparse Responses</h5>
+<p>Responses do not have to contain exhaustive detail. For example, the following
+response is probably just as good:</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/discover-features/1.0/disclose"</span><span class="token punctuation">,</span>
+  <span class="token property">"thread_id"</span><span class="token operator">:</span> <span class="token string">"yWd8wfYzhmuXX3hmLNaV5bVbAjbWaU"</span><span class="token punctuation">,</span>
+  <span class="token property">"protocols"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span><span class="token property">"ptid"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/tictactoe/1.0"</span><span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>The reason why less detail probably suffices is that agents do not need to
+know everything about one another’s implementations in order to start an
+interaction–usually the flow will organically reveal what’s needed. For
+example, the <code>outcome</code> message in the <code>tictactoe</code> protocol isn’t needed
+until the end, and is optional anyway. Alice can start a tictactoe game
+with Bob and will eventually see whether he has the right idea about
+<code>outcome</code> messages.</p>
+<p>The missing <code>roles</code> in this response does not say, “I support no roles
+in this protocol.” It says, “I support the protocol but
+I’m providing no detail about specific roles.”</p>
+<p>Even an empty <code>protocols</code> map does not say, “I support no protocols
+that match your query.” It says, “I’m not telling you that I support any
+protocols that match your query.” An agent might not tell another that
+it supports a protocol for various reasons, including: the trust that
+it imputes to the other party based on cumulative interactions so far,
+whether it’s in the middle of upgrading a plugin, whether it’s currently
+under high load, and so forth. And responses to a <code>discover-features</code> request are
+not guaranteed to be true forever; agents can be upgraded or downgraded,
+although they probably won’t churn in their protocol support from moment
+to moment.</p>
+<h3 id="privacy-considerations-3"><a class="toc-anchor" href="#privacy-considerations-3">§</a> Privacy Considerations</h3>
+<p>Because the regex in a <code>request</code> message can be very inclusive, the <code>discover-features</code>
+protocol could be used to mine information suitable for agent fingerprinting,
+in much the same way that browser fingerprinting works. This is antithetical
+to the ethos of our ecosystem, and represents bad behavior. Agents should
+use <code>discover-features</code> to answer legitimate questions, and not to build detailed
+profiles of one another. However, fingerprinting may be attempted
+anyway.</p>
+<p>For agents that want to maintain privacy, several best practices are
+recommended:</p>
+<h5 id="follow-selective-disclosure"><a class="toc-anchor" href="#follow-selective-disclosure">§</a> Follow selective disclosure.</h5>
+<p>Only reveal supported features based on trust in the relationship.
+Even if you support a protocol, you may not wish to use it in
+every relationship. Don’t tell others about protocols you do
+not plan to use with them.</p>
+<p>Patterns are easier to see in larger data samples. However, a pattern
+of ultra-minimal data is also a problem, so use good judgment about
+how forthcoming to be.</p>
 <h1 id="trust-ping-protocol-10"><a class="toc-anchor" href="#trust-ping-protocol-10">§</a> Trust Ping Protocol 1.0</h1>
 <p>A standard way for agents to test connectivity,
 responsiveness, and security of a DIDComm channel.</p>
-<h2 id="motivation"><a class="toc-anchor" href="#motivation">§</a> Motivation</h2>
+<h2 id="motivation-2"><a class="toc-anchor" href="#motivation-2">§</a> Motivation</h2>
 <p>Agents are distributed. They are not guaranteed to be
 connected or running all the time. They support a
 variety of transports, speak a variety of protocols,
@@ -791,14 +867,14 @@ and run software from many different vendors.</p>
 <p>This can make it very difficult to prove that two
 agents have a functional pairwise channel. Troubleshooting
 connectivity, responsiveness, and security is vital.</p>
-<h2 id="reference-2"><a class="toc-anchor" href="#reference-2">§</a> Reference</h2>
+<h2 id="reference-3"><a class="toc-anchor" href="#reference-3">§</a> Reference</h2>
 <p>This protocol is analogous to the familiar <code>ping</code>
 command in networking–but because it operates
 over DIDComm, it is transport
 agnostic and asynchronous, and it can produce insights
 into privacy and security that a regular ping
 cannot.</p>
-<h3 id="roles-2"><a class="toc-anchor" href="#roles-2">§</a> Roles</h3>
+<h3 id="roles-3"><a class="toc-anchor" href="#roles-3">§</a> Roles</h3>
 <p>There are two parties in a trust ping: the <code>sender</code>
 and the <code>receiver</code>. The sender initiates the trust
 ping. The receiver responds. If the receiver wants
@@ -806,7 +882,7 @@ to do a ping of their own, they can, but this is a
 new interaction in which they become the sender.</p>
 <h3 id="protocol-type-uri"><a class="toc-anchor" href="#protocol-type-uri">§</a> Protocol Type URI</h3>
 <p><code>https://didcomm.org/trust_ping/1.0</code></p>
-<h3 id="messages-3"><a class="toc-anchor" href="#messages-3">§</a> Messages</h3>
+<h3 id="messages-4"><a class="toc-anchor" href="#messages-4">§</a> Messages</h3>
 <h4 id="ping"><a class="toc-anchor" href="#ping">§</a> ping</h4>
 <p>The trust ping interaction begins when <code>sender</code>
 creates a <code>ping</code> message like this:</p>
@@ -889,17 +965,14 @@ indicate so via link to the extension spec.</p>
                   <ul class="toc">
 <li><a href="#purpose-and-scope">Purpose and Scope</a>
 <ul>
-<li><a href="#rough-overview">Rough Overview</a></li>
-<li><a href="#goals-and-ramifications">Goals and Ramifications</a>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#specific-requirements">Specific Requirements</a></li>
+<li><a href="#ramifications">Ramifications</a>
 <ul>
 <li><a href="#message-based-asynchronous-and-simplex">Message-Based, Asynchronous, and Simplex</a></li>
 <li><a href="#message-level-security-reciprocal-authentication">Message-Level Security, Reciprocal Authentication</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li><a href="#requirements">Requirements</a>
-<ul>
 <li><a href="#processing-model">Processing Model</a></li>
 </ul>
 </li>
@@ -980,12 +1053,22 @@ indicate so via link to the extension spec.</p>
 </li>
 </ul>
 </li>
+<li><a href="#summary-2">Summary</a></li>
 <li><a href="#motivation">Motivation</a></li>
 <li><a href="#reference-2">Reference</a>
 <ul>
 <li><a href="#roles-2">Roles</a></li>
+<li><a href="#states-2">States</a></li>
+<li><a href="#messages-3">Messages</a></li>
+<li><a href="#privacy-considerations-3">Privacy Considerations</a></li>
+</ul>
+</li>
+<li><a href="#motivation-2">Motivation</a></li>
+<li><a href="#reference-3">Reference</a>
+<ul>
+<li><a href="#roles-3">Roles</a></li>
 <li><a href="#protocol-type-uri">Protocol Type URI</a></li>
-<li><a href="#messages-3">Messages</a>
+<li><a href="#messages-4">Messages</a>
 <ul>
 <li><a href="#ping">ping</a></li>
 <li><a href="#ping_response">ping_response</a></li>
@@ -1009,7 +1092,7 @@ indicate so via link to the extension spec.</p>
             </slide-panels>
 
           </body>
-          <script>window.specConfig = {"title":"DIDComm Messaging Specification","logo":"https://rawcdn.githack.com/decentralized-identity/decentralized-identity.github.io/a3ca39717e440302d1fd99a796e7f00e1c42eb2d/images/logo-flat.svg","logo_link":"https://identity.foundation","source":{"host":"github","account":"decentralized-identity","repo":"didcomm-messaging"},"output_path":"./docs/spec","spec_directory":"./","markdown_paths":["title.md","scope.md","requirements.md","processing_model.md","message_structure.md","encryption.md","routing.md","transports.md","out_of_band.md","advanced_message_passing.md","connections.md","general_messaging_constructs.md","protocols.md","trustping.md","reference_implementation.md","future_proofing.md","references.md"],"destination":"./docs/spec/","rootResourcePrefix":"./docs/","destinationResourcePrefix":"../"}</script>
+          <script>window.specConfig = {"title":"DIDComm Messaging Specification","logo":"https://rawcdn.githack.com/decentralized-identity/decentralized-identity.github.io/a3ca39717e440302d1fd99a796e7f00e1c42eb2d/images/logo-flat.svg","logo_link":"https://identity.foundation","source":{"host":"github","account":"decentralized-identity","repo":"didcomm-messaging"},"output_path":"./docs/spec","spec_directory":"./","markdown_paths":["title.md","scope.md","requirements.md","processing_model.md","message_structure.md","encryption.md","routing.md","transports.md","out_of_band.md","advanced_message_passing.md","connections.md","general_messaging_constructs.md","protocols.md","feature_discovery.md","trustping.md","reference_implementation.md","future_proofing.md","references.md"],"destination":"./docs/spec/","rootResourcePrefix":"./docs/","destinationResourcePrefix":"../"}</script>
           <script src="../spec-up/compiled/body.js" data-manual></script>
         </html>
       
