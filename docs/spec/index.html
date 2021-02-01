@@ -158,12 +158,13 @@
 </li>
 <li>
 <p><strong>from</strong> - OPTIONAL. Sender identifier. The <code>from</code> attribute MUST be a string that is a valid DID or <a href="https://w3c.github.io/did-core/#did-url-syntax">DID URL</a> (without the <a href="https://w3c.github.io/did-core/#fragment">fragment component</a>) which identifies the sender of the message. When a message is encrypted, the sender key MUST be authorized for encryption by this DID. Authorization of the encryption key for this DID MUST be verified by message recipient with the proper proof purposes. See the <a href="#Message-Authentication">message authentication</a> section for additional details.</p>
+<p>When the sender wishes to be anonymous, they should use a new DID created for the purpose to avoid correlation with any other behavior or identity. Peer DIDs are lightweight and require no ledger writes, and therefore a good method to use for this purpose.</p>
 </li>
 <li>
 <p><strong>created_time</strong> - OPTIONAL. Message Created Time. The <code>created_time</code> attribute is used for the sender to express when they created the message, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute is informative to the recipient, and may be relied on by protocols.</p>
 </li>
 <li>
-<p><strong>expires_time</strong> - OPTIONAL. Message Expired Time. The <code>expires_time</code> attribute is used for the sender to express when they consider the message to be expired, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute signals when the message is no longer valid, and is to be used by the recipient to discard expired messages on receipt.</p>
+<p><strong>expires_time</strong> - OPTIONAL. Message Expired Time. The <code>expires_time</code> attribute is used for the sender to express when they consider the message to be expired, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute signals when the message is considered no longer valid by the sender. When omitted, the message is considered to have no expiration by the sender.</p>
 </li>
 </ul>
 <p>In the outer packaging of message metadata, DIDComm follows the extensibility pattern established by the JW* family of standards. (It also emulates the design of message headers in SMTP, request headers in HTTP, and labels on physical pieces of mail.) A modest inventory of predefined “header” fields is specified, as shown above. Additional fields with unreserved names can be added at the discretion of producers and consumers of messages; any software that doesn’t understand such fields should ignore them and MUST NOT fail because of their inclusion in a message. This is appropriate for a simple, flat data model.</p>
@@ -224,51 +225,8 @@
 <li>This rotation method only supports the case where a new DID is used, replacing an old DID which is no longer used. Adjustments to DIDs used between different parties that does not fit this narrow use should use a more expressive protocol.</li>
 </ul>
 <h1 id="message-encryption"><a class="toc-anchor" href="#message-encryption">§</a> Message Encryption</h1>
-<p>DIDComm supports two types of message encryption: Authenticated Sender Encryption and Anonymous Sender Encryption. Both forms are encrypted to the recipient, but only Authenticated Sender Encryption provides assurances of who the sender is.</p>
 <p>The encrypted form of a JWM is a JWE. The JOSE family defines <a href="https://tools.ietf.org/html/rfc7518">JSON Web Algorithms</a> (JWAs) which standardize certain cryptographic operations that are related to preparing JOSE structures. For the purposes of interoperability, DIDComm messaging does not support all JWAs, rather it takes a subset of the supported algorithms that are applicable for the following cases around secure messaging. These supported algorithms are listed here.</p>
-<h2 id="sender-authenticated-encryption"><a class="toc-anchor" href="#sender-authenticated-encryption">§</a> Sender Authenticated Encryption</h2>
-<p>When a sender would like to encrypt a message for a recipient or multiple recipients and also be authenticated such that the recipients can determine they were the party that encrypted the message, the JWA of <code>ECDH-1PU</code> defined by <a href="https://tools.ietf.org/html/draft-madden-jose-ecdh-1pu-03">draft</a> SHOULD be used within the structure of a JWE.</p>
-<p>For the keys involved in key agreement, the following elliptic curves MUST be supported.</p>
-<table>
-<thead>
-<tr>
-<th>Curve</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>X25519</td>
-<td>The underlying curve is actually <code>Curve25519</code>, however when used in the context of Diffie-Hellman the identifier of <code>X25519</code> is used</td>
-</tr>
-<tr>
-<td>P-256</td>
-<td>NIST defined P-256 elliptic curve</td>
-</tr>
-</tbody>
-</table>
-<p>For content encryption of the message, the following algorithms MUST be supported.</p>
-<table>
-<thead>
-<tr>
-<th>Algorithm(JWA)</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>XC20P</td>
-<td>XChaCha20Poly1305</td>
-</tr>
-<tr>
-<td>A256GCM</td>
-<td>AES-GCM with a 256 bit key</td>
-</tr>
-</tbody>
-</table>
-<p>TODO: Include language about safe nonce considerations.</p>
-<h2 id="anonymous-encryption"><a class="toc-anchor" href="#anonymous-encryption">§</a> Anonymous Encryption</h2>
-<p>When a sender would like to encrypt a message for a recipient or multiple recipients but not be authenticated by the recipients as the party who encrypted the message, the JWA of <code>ECDH-ES</code> defined by <a href="https://tools.ietf.org/html/rfc7518#section-4.6">RFC 7518</a> SHOULD be used within the structure of a JWE.</p>
+<p>For an encrypted DIDComm Message, the JWA of <code>ECDH-1PU</code> defined by <a href="https://tools.ietf.org/html/draft-madden-jose-ecdh-1pu-03">draft</a> MUST be used within the structure of a JWE.</p>
 <p>For the keys involved in key agreement, the following elliptic curves MUST be supported.</p>
 <table>
 <thead>
@@ -320,30 +278,6 @@
 </thead>
 <tbody>
 <tr>
-<td>ECDH-ES+A256KW</td>
-<td>P-256</td>
-<td>EC</td>
-<td>ECDH-ES key wrapping using key with NIST defined P-256 elliptic curve to create a 256 bits key as defined in <a href="https://tools.ietf.org/html/rfc7518#section-4.6.2">7518</a></td>
-</tr>
-<tr>
-<td>ECDH-ES+A256KW</td>
-<td>P-384</td>
-<td>EC</td>
-<td>ECDH-ES key wrapping using key with NIST defined P-384 elliptic curve to create a 256 bits key as defined in <a href="https://tools.ietf.org/html/rfc7518#section-4.6.2">7518</a></td>
-</tr>
-<tr>
-<td>ECDH-ES+A256KW</td>
-<td>P-521</td>
-<td>EC</td>
-<td>ECDH-ES key wrapping using key with NIST defined P-521 elliptic curve to create a 256 bits key as defined in <a href="https://tools.ietf.org/html/rfc7518#section-4.6.2">7518</a></td>
-</tr>
-<tr>
-<td>ECDH-ES+A256KW</td>
-<td>X25519</td>
-<td>OKP</td>
-<td>ECDH-ES with X25519 (<a href="https://tools.ietf.org/html/rfc7748#section-5">RFC7748 section 5</a>) to create a 256 bits key. The underlying curve is actually <code>Curve25519</code>, however when used in the context of Diffie-Hellman the identifier of <code>X25519</code> is used</td>
-</tr>
-<tr>
 <td>ECDH-1PU+A256KW</td>
 <td>P-256</td>
 <td>EC</td>
@@ -369,6 +303,8 @@
 </tr>
 </tbody>
 </table>
+<h2 id="anonymous-messages"><a class="toc-anchor" href="#anonymous-messages">§</a> Anonymous Messages</h2>
+<p>When the sender wishes to remain anonymous, they should identify themselves as a sender using a newly minted DID that’s never been seen before. When the sender is done with the interaction, they can abandon further use of that DID.</p>
 <h2 id="perfect-forward-secrecy"><a class="toc-anchor" href="#perfect-forward-secrecy">§</a> Perfect Forward Secrecy</h2>
 <p>Due to the triple Key Derivation algorithm used in ECDH-1PU, all messages sent via DIDComm have weak perfect forward secrecy without any additional security added by the transport layer. In ECDH-1PU this is achieved by encrypting the content encryption key with the output of the hash of the Ze (ECDH of ephemeral key and recipient static key) and Zs (ECDH of static sender key and recipient static key). With Ze bringing the changed derived secret in each message and Zs bringing the repudiable authenticity of each message, the resulting Z (hash of Ze and Zs) carries the properties of weak perfect forward secrecy and repudiable authenticity for each message as well.</p>
 <h2 id="examples"><a class="toc-anchor" href="#examples">§</a> Examples</h2>
@@ -448,57 +384,26 @@
 <h4 id="messages"><a class="toc-anchor" href="#messages">§</a> Messages</h4>
 <p>The only message in this protocol is the <code>forward</code> message. A simple and common version of a <code>forward</code> message might look like this:</p>
 <pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
-    <span class="token property">"@type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/routing/2.0/forward"</span><span class="token punctuation">,</span>
-    <span class="token property">"to"</span>   <span class="token operator">:</span> <span class="token string">"did:foo:1234abcd"</span><span class="token punctuation">,</span>
-    <span class="token property">"payloads~attach"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-        <span class="token comment">// One payload</span>
+    <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/routing/2.0/forward"</span><span class="token punctuation">,</span>
+    <span class="token property">"to"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"did:example:mediator"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"expires_time"</span><span class="token operator">:</span> <span class="token number">1516385931</span><span class="token punctuation">,</span>
+    <span class="token property">"body"</span><span class="token operator">:</span><span class="token punctuation">{</span>
+        <span class="token property">"next"</span>   <span class="token operator">:</span> <span class="token string">"did:foo:1234abcd"</span><span class="token punctuation">,</span>
+        <span class="token property">"payloads~attach"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token comment">// One payload?</span>
+        <span class="token punctuation">]</span>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>A fancier version with many optional attributes has the following potential structure:</p>
-<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
-    <span class="token property">"@id"</span><span class="token operator">:</span> <span class="token string">"uuid value"</span> <span class="token comment">// optional; only useful for tracing</span>
-    <span class="token property">"@type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/routing/2.0/forward"</span><span class="token punctuation">,</span>
-    <span class="token property">"to"</span>   <span class="token operator">:</span> <span class="token string">"did:foo:1234abcd"</span><span class="token punctuation">,</span>
-    <span class="token property">"payloads~attach"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-        <span class="token comment">// An array of attached payloads, generally assumed</span>
-        <span class="token comment">// to be DIDComm encrypted envelopes, but theoretically</span>
-        <span class="token comment">// could be other message types as well.</span>
-    <span class="token punctuation">]</span><span class="token punctuation">,</span>
-    <span class="token comment">// This decorator and everything in it are optional. </span>
-    <span class="token property">"~timing"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-        <span class="token comment">// Usually, delay_milli and wait_until_time don't make</span>
-        <span class="token comment">// sense together; use one or the other but not both. If</span>
-        <span class="token comment">// both do occur, forward shouldn't happen until the later</span>
-        <span class="token comment">// of the two conditions is satisfied.</span>
-        <span class="token property">"delay_milli"</span><span class="token operator">:</span> <span class="token number">12345</span><span class="token punctuation">,</span>
-        <span class="token property">"wait_until_time"</span><span class="token operator">:</span> <span class="token string">"2020-03-25T00:00:00Z"</span><span class="token punctuation">,</span>
-        <span class="token comment">// Abandon attempt to forward after this timestamp.</span>
-        <span class="token property">"expires_time"</span><span class="token operator">:</span> <span class="token string">"2020-03-27T18:25:00Z"</span> 
-    <span class="token punctuation">}</span><span class="token punctuation">,</span>
-    <span class="token comment">// Optional: requests use of mix network instead of direct</span>
-    <span class="token comment">// forward, to enhance privacy.</span>
-    <span class="token property">"mix"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-        <span class="token comment">// Likelihood (from 0 to 1) that a random node in a</span>
-        <span class="token comment">// mix network should be the next hop instead of</span>
-        <span class="token comment">// sending the message directly to its final receiver.</span>
-        <span class="token property">"hop_chance"</span><span class="token operator">:</span> <span class="token number">0.8</span><span class="token punctuation">,</span>
-        <span class="token comment">// If next receiver is a mix node, multiply hop_chance</span>
-        <span class="token comment">// by this value so hop_chance attenuates for the next</span>
-        <span class="token comment">// receiver. This prevents infinite mixing. Max value =</span>
-        <span class="token comment">// 0.99.</span>
-        <span class="token property">"hop_decay"</span><span class="token operator">:</span> <span class="token number">0.2</span><span class="token punctuation">,</span>
-        <span class="token comment">// Likelihood (from 0 to 1) that the message size will</span>
-        <span class="token comment">// be distorted to the next receiver. </span>
-        <span class="token property">"noise_chance"</span><span class="token operator">:</span> <span class="token number">0.5</span>
-    <span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-</code></pre>
+<ul>
+<li><strong>next</strong> - REQUIRED. The DID of the party to send the attached message to.</li>
+<li><strong>payloads~attach</strong> - REQUIRED. The encrypted message to send to the party indicated in the <code>next</code> body attribute.</li>
+</ul>
+<p>When the internal message expires, it’s a good idea to also include an expiration for forward message requests. Include the <code>expires_time</code> header with the appropriate value.</p>
 <p>[TODO: describe use of the <code>attn</code> field, and explain why it’s an important construct that allows us to encrypt to all (cryptographic route) but deliver just to the agent most likely to be interested (network route).</p>
 <p>[TODO: further revise the following paragraph to clarify that either a key or a DID might be used. Each possibility makes certain tradeoffs, and may be appropriate in certain cases. Keys may be fragile in the face of rotation, and they require a lot of knowledge/maintenance cost for the external mediator. However, DID key references and DIDs may introduce some complications in how the recipient proves control of a DID (a requirement for security, but also a privacy eroder).]</p>
-<p>For most external mediators, the value of the <code>to</code> field is likely to be a DID, not a key. However… (see previous TODO note). This hides details about the internals of a sovereign domain from external parties. The sender will have had to multiplex encrypt for all relevant recipient keys, but doesn’t need to know how routing happens to those keys. The mediator and the receiver may have coordinated about how distribution to individual keys takes place (see <a href="https://github.com/hyperledger/aries-rfcs/blob/master/features/0211-route-coordination/README.md">RFC 0211: Route Coordination</a>), but that is outside the scope of concerns of this protocol.</p>
+<p>For most external mediators, the value of the <code>next</code> field is likely to be a DID, not a key. However… (see previous TODO note). This hides details about the internals of a sovereign domain from external parties. The sender will have had to multiplex encrypt for all relevant recipient keys, but doesn’t need to know how routing happens to those keys. The mediator and the receiver may have coordinated about how distribution to individual keys takes place (see <a href="https://github.com/hyperledger/aries-rfcs/blob/master/features/0211-route-coordination/README.md">RFC 0211: Route Coordination</a>), but that is outside the scope of concerns of this protocol.</p>
 <p>The attachment(s) in the <code>payloads~attach</code> field are able to use the full power of DIDComm attachments, including features like instructing the receiver to download the payload content from a CDN.</p>
-<p>The <code>mix</code> property is discussed next.</p>
 <h4 id="rewrapping"><a class="toc-anchor" href="#rewrapping">§</a> Rewrapping</h4>
 <p>Normally, the payload attached to the <code>forward</code> message received by the mediator is transmitted directly to the receiver with no further packaging. However, optionally, the mediator can attach the opaque payload to a new <code>forward</code> message, which then acts as a fresh outer envelope for the second half of the delivery. This <a href="#rewrapping">rewrapping</a> means that the “onion” of packed messages stays the same size rather than getting smaller as a result of the forward operation:</p>
 <p><img src="/collateral/routing-roles-2.png" alt="re-wrapped sequence"></p>
@@ -846,6 +751,7 @@ statically configured to interact with just one other party, many
 exciting uses of agents are more dynamic and unpredictable. When
 Alice and Bob meet, they won’t know in advance which features are
 supported by one another’s agents. They need a way to find out.</p>
+<p>Disclosing features in this manner has a significant privacy benefit over endpoint disclosures contained in a DID Document published to a Verifiable Data Registry (VDR). Using the single DIDComm endpoint published in the document and this protocol, features can be selectively disclosed to other parties at the owner’s discretion. The problem of anonymous scanning and fingerprinting enabled with VDR disclosures is solved in a privacy preserving way.</p>
 <h3 id="reference-2"><a class="toc-anchor" href="#reference-2">§</a> Reference</h3>
 <p>This RFC introduces a protocol for discussing the protocols an agent
 can handle. The identifier for the message family used by this protocol is
@@ -1097,9 +1003,8 @@ gains by virtue of the properties of the DIDComm messages. A ping and response v
 </li>
 </ul>
 </li>
-<li><a href="#sender-authenticated-encryption">Sender Authenticated Encryption</a></li>
-<li><a href="#anonymous-encryption">Anonymous Encryption</a></li>
 <li><a href="#key-wrapping-algorithms">Key Wrapping Algorithms</a></li>
+<li><a href="#anonymous-messages">Anonymous Messages</a></li>
 <li><a href="#perfect-forward-secrecy">Perfect Forward Secrecy</a></li>
 <li><a href="#examples">Examples</a></li>
 <li><a href="#message-signing">Message Signing</a>
