@@ -22,7 +22,7 @@ In this protocol, the sender and the receiver never interact directly; they only
 
 The sender can decorate the `forward` message in standard DIDComm ways: using [`~timing.expires_time`, `~timing.delay_milli` and `~timing.wait_until_time`](https://github.com/hyperledger/aries-rfcs/blob/master/features/0032-message-timing/README.md#tutorial) to introduce timeouts and delays, and so forth. However, the mediator is NOT required to support or implement any of these mixin semantics; only the core forwarding behavior is indispensable. If a mediator sees a decorator that requests behavior it doesn't support, it MAY return a [`problem-report`](https://github.com/hyperledger/aries-rfcs/blob/master/features/0035-report-problem/README.md) to the sender identifying the unsupported feature, but it is not required to do so, any more than other recipients of DIDComm messages would be required to complain about unsupported decorators in messages they receive.
 
->One particular decorator is worth special mention here: [`~please_ack`](https://github.com/hyperledger/aries-rfcs/blob/master/features/0015-acks/README.md#requesting-an-ack-please_ack). This decorator is intended to be processed by ultimate recipients, not mediators. It imposes a burden of backward-facing communication that mediators should not have. Furthermore, it may be used to probe a delivery chain in a way that risks privacy for the receiver. Therefore, senders SHOULD NOT use this, and mediators SHOULD NOT honor it if present. If a sender wishes to troubleshoot, the [message tracing](https://github.com/hyperledger/aries-rfcs/blob/master/features/0034-message-tracing/README.md) mechanism is recommended.
+>[[TODO: needs revision when we decide how ACKs will work and whether explicit requests for an ACK will be conveyed via headers.]] One particular decorator is worth special mention here: [`~please_ack`](https://github.com/hyperledger/aries-rfcs/blob/master/features/0015-acks/README.md#requesting-an-ack-please_ack). This decorator is intended to be processed by ultimate recipients, not mediators. If it were used with `forward` messages, it would impose a burden of backward-facing communication that mediators should not have. Furthermore, it could probe a delivery chain in a way that risks privacy for the receiver. Therefore, senders SHOULD NOT use this on `forward` messages, and mediators SHOULD NOT honor it if present. If a sender wishes to troubleshoot, the [message tracing](https://github.com/hyperledger/aries-rfcs/blob/master/features/0034-message-tracing/README.md) mechanism is recommended.
 
 #### States
 
@@ -117,7 +117,11 @@ DIDComm DID Document endpoints have the following format:
     "id": "did:example:123456789abcdefghi#didcomm-1",
     "type": "DIDCommMessaging",
     "serviceEndpoint": "http://example.com/path",
-    "routingKeys": ["did:example:somemediator#somekey"]
+    "accept": [
+       "didcomm/v2",
+       "didcomm/aip2;env=rfc587"
+     ],
+     "routingKeys": ["did:example:somemediator#somekey"]
 }
 ```
 
@@ -126,6 +130,10 @@ DIDComm DID Document endpoints have the following format:
 **type**: MUST be `DIDCommMessaging`. 
 
 **serviceEndpoint**: MUST contain a URI for a transport specified in the [transports] section of this spec, or a URI from Alternative Endpoints. It MAY be desirable to constraint endpoints from the [transports] section so that they are used only for the reception of DIDComm messages. This can be particularly helpful in cases where auto-detecting message types is inefficient or undesirable.
+
+**accept***: An optional array of media types in the order of preference for sending a message to the endpoint.
+If `accept` is not specified, the sender uses its preferred choice for sending a message to the endpoint.
+Please see [Message Types](#message-types) for details about media types.
 
 **routingKeys**: An optional ordered array of strings referencing keys to be used when preparing the message for transmission as specified in the [Routing] section of this spec. 
 
