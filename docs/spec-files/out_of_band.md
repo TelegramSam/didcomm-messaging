@@ -22,19 +22,21 @@ Each message passed this way must be contained within an `out-of-band` message, 
 
 The out-of-band protocol a single message that is sent by the *sender*.
 
-#### Invitation: `https://didcomm.org/out-of-band/%VER/invitation`
+#### Invitation: `https://didcomm.org/out-of-band/2.0/invitation`
 
 ```jsonc
 {
   "typ": "application/didcomm-plain+json",
-  "type": "https://didcomm.org/out-of-band/%VER/invitation",
+  "type": "https://didcomm.org/out-of-band/2.0/invitation",
   "id": "<id used for context as pthid>",
-  "goal_code": "issue-vc",
-  "goal": "To issue a Faber College Graduate credential",
-  "accept": [
-    "didcomm/v2",
-    "didcomm/aip2;env=rfc587"
-  ],
+  "body": {
+    "goal_code": "issue-vc",
+    "goal": "To issue a Faber College Graduate credential",
+    "accept": [
+      "didcomm/v2",
+      "didcomm/aip2;env=rfc587"
+    ],
+  },
   "attachments": [
     {
         "@id": "request-0",
@@ -55,8 +57,8 @@ The items in the message are:
 - `goal` - [optional] a self-attested string that the receiver may want to display to the user about the context-specific goal of the out-of-band message.
 - `accept` - [optional] an array of media (aka mime) types in the order of preference of the sender that the receiver can use in responding to the message.
  If `accept` is not specified, the receiver uses its preferred choice to respond to the message.
- Please see [Message Types](#message-types) for details about media types.
-- `attachments` - an array of attachments that will contain the invitation messages in order of preference that the receiver can using in responding to the message. Each message in the array is a rough equivalent of the others, an all are in pursuit of the stated `goal` and `goal_code`. Only one of the messages should be chosen and acted upon.
+  Please see [Message Types](#message-types) for details about media types.
+- `attachments` - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated `goal` and `goal_code`. Only one of the messages should be chosen and acted upon.
   - While the JSON form of the attachment is used in the example above, the sender could choose to use the base64 form.
 
 When encoding a message in a URL or QR code, the _sender_ does not know which protocols are supported by the _recipient_ of the message. Encoding multiple alternative messages is a form of optimistic protocol negotiation that allows multiple supported protocols without coordination
@@ -94,12 +96,12 @@ Invitation:
 ```json
 {
   "typ": "application/didcomm-plain+json",
-  "type": "https://didcomm.org/out-of-band/0.1/invitation",
+  "type": "https://didcomm.org/out-of-band/2.0/invitation",
   "id": "69212a3a-d068-4f9d-a2dd-4741bca89af3",
   "from": "did:example:alice",
   "body": {
       "goal_code": "",
-      "goal": "",
+      "goal": ""
   },
   "attachments": [
       {
@@ -116,19 +118,19 @@ Invitation:
 Whitespace removed:
 
 ```json
-{"typ": "application/didcomm-plain+json","type":"https://didcomm.org/out-of-band/0.1/invitation","id":"69212a3a-d068-4f9d-a2dd-4741bca89af3","from":"did:example:alice","body":{"goal_code":"","goal": "","request~attach":[{"@id":"request-0","mime-type":"application/json","data":{"json":"<json of protocol message>"}}]}}
+{"typ":"application/didcomm-plain+json","type":"https://didcomm.org/out-of-band/2.0/invitation","id":"69212a3a-d068-4f9d-a2dd-4741bca89af3","from":"did:example:alice","body":{"goal_code":"","goal":""},"attachments":[{"@id":"request-0","mime-type":"application/json","data":{"json":"<json of protocol message>"}}]}
 ```
 
 Base 64 URL Encoded:
 
 ```text
-eyJ0eXAiOiAiYXBwbGljYXRpb24vZGlkY29tbS1wbGFpbitqc29uIiwidHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMC4xL2ludml0YXRpb24iLCJpZCI6IjY5MjEyYTNhLWQwNjgtNGY5ZC1hMmRkLTQ3NDFiY2E4OWFmMyIsImZyb20iOiJkaWQ6ZXhhbXBsZTphbGljZSIsImJvZHkiOnsiZ29hbF9jb2RlIjoiIiwiZ29hbCI6ICIiLCJyZXF1ZXN0fmF0dGFjaCI6W3siQGlkIjoicmVxdWVzdC0wIiwibWltZS10eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImRhdGEiOnsianNvbiI6Ijxqc29uIG9mIHByb3RvY29sIG1lc3NhZ2U-In19XX19
+eyJ0eXAiOiJhcHBsaWNhdGlvbi9kaWRjb21tLXBsYWluK2pzb24iLCJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsX2NvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ==
 ```
 
 Example URL:
 
 ```text
-http://example.com/path?_oob=eyJ0eXAiOiAiYXBwbGljYXRpb24vZGlkY29tbS1wbGFpbitqc29uIiwidHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMC4xL2ludml0YXRpb24iLCJpZCI6IjY5MjEyYTNhLWQwNjgtNGY5ZC1hMmRkLTQ3NDFiY2E4OWFmMyIsImZyb20iOiJkaWQ6ZXhhbXBsZTphbGljZSIsImJvZHkiOnsiZ29hbF9jb2RlIjoiIiwiZ29hbCI6ICIiLCJyZXF1ZXN0fmF0dGFjaCI6W3siQGlkIjoicmVxdWVzdC0wIiwibWltZS10eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImRhdGEiOnsianNvbiI6Ijxqc29uIG9mIHByb3RvY29sIG1lc3NhZ2U-In19XX19
+http://example.com/path?_oob=eyJ0eXAiOiJhcHBsaWNhdGlvbi9kaWRjb21tLXBsYWluK2pzb24iLCJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsX2NvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ==
 ```
 
 DIDComm message URLs can be transferred via any method that can send text, including an email, SMS, posting on a website, or QR Code.
@@ -142,9 +144,9 @@ Subject: Your request to connect and receive your graduate verifiable credential
 
 Dear Alice,
 
-To receive your Faber College graduation certificate, click here to [connect](http://example.com/path?_oob=eyJ0eXAiOiAiYXBwbGljYXRpb24vZGlkY29tbS1wbGFpbitqc29uIiwidHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMC4xL2ludml0YXRpb24iLCJpZCI6IjY5MjEyYTNhLWQwNjgtNGY5ZC1hMmRkLTQ3NDFiY2E4OWFmMyIsImZyb20iOiJkaWQ6ZXhhbXBsZTphbGljZSIsImJvZHkiOnsiZ29hbF9jb2RlIjoiIiwiZ29hbCI6ICIiLCJyZXF1ZXN0fmF0dGFjaCI6W3siQGlkIjoicmVxdWVzdC0wIiwibWltZS10eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImRhdGEiOnsianNvbiI6Ijxqc29uIG9mIHByb3RvY29sIG1lc3NhZ2U-In19XX19 with us, or paste the following into your browser:
+To receive your Faber College graduation certificate, click here to [connect](http://example.com/path?_oob=eyJ0eXAiOiJhcHBsaWNhdGlvbi9kaWRjb21tLXBsYWluK2pzb24iLCJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsX2NvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ== with us, or paste the following into your browser:
 
-http://example.com/path?_oob=eyJ0eXAiOiAiYXBwbGljYXRpb24vZGlkY29tbS1wbGFpbitqc29uIiwidHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMC4xL2ludml0YXRpb24iLCJpZCI6IjY5MjEyYTNhLWQwNjgtNGY5ZC1hMmRkLTQ3NDFiY2E4OWFmMyIsImZyb20iOiJkaWQ6ZXhhbXBsZTphbGljZSIsImJvZHkiOnsiZ29hbF9jb2RlIjoiIiwiZ29hbCI6ICIiLCJyZXF1ZXN0fmF0dGFjaCI6W3siQGlkIjoicmVxdWVzdC0wIiwibWltZS10eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImRhdGEiOnsianNvbiI6Ijxqc29uIG9mIHByb3RvY29sIG1lc3NhZ2U-In19XX19
+http://example.com/path?_oob=eyJ0eXAiOiJhcHBsaWNhdGlvbi9kaWRjb21tLXBsYWluK2pzb24iLCJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsX2NvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ==
 
 If you don't have an identity agent for holding credentials, you will be given instructions on how you can get one.
 

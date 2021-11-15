@@ -49,7 +49,11 @@ TODO: Include language about safe nonce considerations.
 
 ### Perfect Forward Secrecy
 
-Due to the triple Key Derivation algorithm used in ECDH-1PU, all messages sent via DIDComm have weak perfect forward secrecy without any additional security added by the transport layer. In ECDH-1PU this is achieved by encrypting the content encryption key with the output of the hash of the Ze (ECDH of ephemeral key and recipient static key) and Zs (ECDH of static sender key and recipient static key). With Ze bringing the changed derived secret in each message and Zs bringing the repudiable authenticity of each message, the resulting Z (hash of Ze and Zs) carries the properties of weak perfect forward secrecy and repudiable authenticity for each message as well.
+The mapping of the Perfect Forward Secrecy concepts to DIDComm requires some discussion. Please refer to the Implementers Guide for more details.
+
+### Man in the middle
+
+DIDComm's profile with respect to man-in-the-middle attacks is easily misunderstood. Please refer to the Implementers Guide for more details.
 
 ### Key IDs `kid` and `skid` headers references in the DID document
 
@@ -134,4 +138,4 @@ A final note about `skid` header: since the 1PU draft [does not require](https:/
 
 While the details of encrypting a JWM into a JWE are included in the [JWM spec](https://tools.ietf.org/html/draft-looker-jwm-01), a few examples are included here for clarity.
 
-TODO: Add examples here
+See section [Appendix C.3](#c3-didcomm-encrypted-messages) for examples.

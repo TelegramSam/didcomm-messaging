@@ -87,32 +87,32 @@ Headers in [DIDComm Messaging](.) are intended to be extensible in much the same
 
 - **typ** - OPTIONAL. Media type of the JWM content.
 
-    The following table provides an overview of using the media type properties in supported [DIDComm Messaging](.) messages:
+The following table provides an overview of using the media type properties in supported [DIDComm Messaging](.) messages:
 
-    | Envelope | `typ` |
-    |-----------------|-------|
-    | Authcrypted and/or anoncrypted | `application/didcomm-encrypted+json`|
-    | Signed and anoncrypted | `application/didcomm-encrypted+json`|
-    | Signed | `application/didcomm-signed+json` |
-    | Plaintext | `application/didcomm-plain+json`|
+| Envelope | `typ` |
+|-----------------|-------|
+| Authcrypted and/or anoncrypted | `application/didcomm-encrypted+json`|
+| Signed and anoncrypted | `application/didcomm-encrypted+json`|
+| Signed | `application/didcomm-signed+json` |
+| Plaintext | `application/didcomm-plain+json`|
 
-- **to** - OPTIONAL. Identifier(s) for recipients. MUST be an array of strings where each element is a valid [DID](https://www.w3.org/TR/did-core/) or [DID URL](https://w3c.github.io/did-core/#did-url-syntax) (without the [fragment component](https://w3c.github.io/did-core/#fragment)) that identifies a member of the message's intended audience.
+- **to** - OPTIONAL. Identifier(s) for recipients. MUST be an array of strings where each element is a valid [DID](https://www.w3.org/TR/did-core/) or [DID URL](https://w3c.github.io/did-core/#did-url-syntax) (without the [fragment component](https://w3c.github.io/did-core/#fragment)) that identifies a member of the message's intended audience. These values are useful for recipients to know which of their keys can be used for decryption. It is not possible for one recipient to verify that the message was sent to a different recipient.
 
- When Alice sends the same message to Bob and Carol, it is by inspecting this header that Bob and Carol learn that the message was sent to both of them. If the header is omitted, each recipient can only assume they are the only recipient (much like an email sent only to `BCC:` addresses).
+When Alice sends the same message to Bob and Carol, it is by inspecting this header that Bob and Carol learn that the message was sent to both of them. If the header is omitted, each recipient can only assume they are the only recipient (much like an email sent only to `BCC:` addresses).
 
 The `to` header cannot be used for routing, since it is encrypted at every intermediate point in a route. Instead, the `forward` message contains a `next` attribute in its body that specifies the target for the next routing operation.
 
-- **from** - OPTIONAL. Sender identifier. The `from` attribute MUST be a string that is a valid [DID](https://w3c.github.io/did-core/) or [DID URL](https://w3c.github.io/did-core/#did-url-syntax) (without the [fragment component](https://w3c.github.io/did-core/#fragment)) which identifies the sender of the message. When a message is encrypted, the sender key MUST be authorized for encryption by this [DID](https://w3c.github.io/did-core/). Authorization of the encryption key for this [DID](https://w3c.github.io/did-core/) MUST be verified by message recipient with the proper proof purposes. See the [message authentication](#Message-Authentication) section for additional details.
+- **from** - OPTIONAL when the message is to be encrypted via anoncrypt. REQUIRED when the message is encrypted via authcrypt. Sender identifier. The `from` attribute MUST be a string that is a valid [DID](https://w3c.github.io/did-core/) or [DID URL](https://w3c.github.io/did-core/#did-url-syntax) (without the [fragment component](https://w3c.github.io/did-core/#fragment)) which identifies the sender of the message. When a message is encrypted, the sender key MUST be authorized for encryption by this [DID](https://w3c.github.io/did-core/). Authorization of the encryption key for this [DID](https://w3c.github.io/did-core/) MUST be verified by message recipient with the proper proof purposes. When the sender wishes to be anonymous using authcrypt, it is recommended to use a new [DID](https://w3c.github.io/did-core/) created for the purpose to avoid correlation with any other behavior or identity. Peer [DIDs](https://w3c.github.io/did-core/) are lightweight and require no ledger writes, and therefore a good method to use for this purpose. See the [message authentication](#Message-Authentication) section for additional details.
 
-  When the sender wishes to be anonymous, they SHOULD use a new [DID](https://w3c.github.io/did-core/) created for the purpose to avoid correlation with any other behavior or identity. Peer [DIDs](https://w3c.github.io/did-core/) are lightweight and require no ledger writes, and therefore a good method to use for this purpose.
-
-- **thid** - OPTIONAL. Thread identifier. Uniquely identifies the thread that the message belongs to. If not included the `id` property of the message MUST be treated as the value of the `thid`.
+- **thid** - OPTIONAL. Thread identifier. Uniquely identifies the thread that the message belongs to. If not included, the `id` property of the message MUST be treated as the value of the `thid`.
 
 - **pthid** - OPTIONAL. Parent thread identifier. If the message is a child of a thread the `pthid` will uniquely identify which thread is the parent.
 
 - **created_time** - OPTIONAL. Message Created Time. The `created_time` attribute is used for the sender to express when they created the message, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute is informative to the recipient, and may be relied on by protocols.
 
 - **expires_time** - OPTIONAL. Message Expired Time. The `expires_time` attribute is used for the sender to express when they consider the message to be expired, expressed in UTC Epoch Seconds (seconds since 1970-01-01T00:00:00Z UTC) [link](1970-01-01T00:00:00Z UTC). This attribute signals when the message is considered no longer valid by the sender. When omitted, the message is considered to have no expiration by the sender.
+
+- **body** - REQUIRED. The `body` attribute contains all the message type specific attributes of the message type indicated in the `type` attribute. This attribute MUST be present, even if empty. It MUST be a JSON object conforming to [RFC 7159](https://datatracker.ietf.org/doc/html/rfc7159).
 
 With respect to headers, [DIDComm Messaging](.) follows the extensibility pattern established by the JW* family of standards. A modest inventory of predefined "header" fields is specified, as shown above. Additional fields with unreserved names can be added at the discretion of producers and consumers of messages; any software that doesn't understand such fields SHOULD ignore them and MUST NOT fail because of their inclusion in a message. This is appropriate for a simple, flat data model.
 
@@ -138,7 +138,7 @@ The body of a message -- everything inside the `body` object -- is different. He
 
 When a [DID](https://www.w3.org/TR/did-core/) is rotated, the new [DID](https://www.w3.org/TR/did-core/) is put into immediate use encrypting the message, and one additional attribute MUST be included as a message header:
 
-- **from_prior**: REQUIRED. A JWT, with with `sub`: new [DID](https://www.w3.org/TR/did-core/) and `iss`: prior [DID](https://www.w3.org/TR/did-core/), with a signature from a key authorized by prior [DID](https://www.w3.org/TR/did-core/).
+- **from_prior**: REQUIRED. A JWT, with `sub`: new [DID](https://www.w3.org/TR/did-core/) and `iss`: prior [DID](https://www.w3.org/TR/did-core/), with a signature from a key authorized by prior [DID](https://www.w3.org/TR/did-core/).
 
 When a message is received from an unknown [DID](https://www.w3.org/TR/did-core/), the recipient SHOULD check for existence of the `from_prior` header. The JWT in the`from_prior` attribute is used to extract the prior [DID](https://www.w3.org/TR/did-core/) (`iss`) and is checked to verify the validity of the rotation. The recipient then associates the message with context related to the known sender. The new [DID](https://www.w3.org/TR/did-core/) and associated [DID](https://www.w3.org/TR/did-core/) Document information SHOULD be used for further communication.
 
@@ -191,5 +191,6 @@ The JWT is constructed as follows, with appropriate values changed.
 
 #### Rotation Limitations
 
+- This rotation method does not cover cases where a multi-sig is required. Rotations with such requirements should use a more expressive protocol.
+
 - This rotation method only supports the case where a new [DID](https://www.w3.org/TR/did-core/) is used, replacing an old [DID](https://www.w3.org/TR/did-core/) which is no longer used. Adjustments to [DIDs](https://www.w3.org/TR/did-core/) used between different parties that does not fit this narrow use are expected to define a separate protocol to do so.
-- This rotation method only supports the case where a new [DID](https://www.w3.org/TR/did-core/) is used, replacing an old [DID](https://www.w3.org/TR/did-core/) which is no longer used. Adjustments to [DIDs](https://www.w3.org/TR/did-core/) used between different parties that does not fit this narrow use SHOULD use a more expressive protocol.
