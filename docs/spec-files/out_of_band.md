@@ -29,8 +29,9 @@ The out-of-band protocol a single message that is sent by the *sender*.
   "typ": "application/didcomm-plain+json",
   "type": "https://didcomm.org/out-of-band/2.0/invitation",
   "id": "<id used for context as pthid>",
+  "from":"<sender's did>",
   "body": {
-    "goal_code": "issue-vc",
+    "goal-code": "issue-vc",
     "goal": "To issue a Faber College Graduate credential",
     "accept": [
       "didcomm/v2",
@@ -53,12 +54,13 @@ The items in the message are:
 
 - `type` - the DIDComm message type
 - `id` - the unique ID of the message. The ID should be used as the **parent** thread ID (`pthid`) for the response message, rather than the more common thread ID (`thid`) of the response message. This enables multiple uses of a single out-of-band message.
-- `goal_code` - [optional] a self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.
+- `from` - the DID representing the sender to be used by recipients for future interactions.
+- `goal-code` - [optional] a self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.
 - `goal` - [optional] a self-attested string that the receiver may want to display to the user about the context-specific goal of the out-of-band message.
 - `accept` - [optional] an array of media (aka mime) types in the order of preference of the sender that the receiver can use in responding to the message.
  If `accept` is not specified, the receiver uses its preferred choice to respond to the message.
   Please see [Message Types](#message-types) for details about media types.
-- `attachments` - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated `goal` and `goal_code`. Only one of the messages should be chosen and acted upon.
+- `attachments` - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated `goal` and `goal-code`. Only one of the messages should be chosen and acted upon.
   - While the JSON form of the attachment is used in the example above, the sender could choose to use the base64 form.
 
 When encoding a message in a URL or QR code, the _sender_ does not know which protocols are supported by the _recipient_ of the message. Encoding multiple alternative messages is a form of optimistic protocol negotiation that allows multiple supported protocols without coordination
@@ -100,7 +102,7 @@ Invitation:
   "id": "69212a3a-d068-4f9d-a2dd-4741bca89af3",
   "from": "did:example:alice",
   "body": {
-      "goal_code": "",
+      "goal-code": "",
       "goal": ""
   },
   "attachments": [
@@ -174,3 +176,67 @@ It seems inevitable that the length of some DIDComm messages will be too long to
 A usable QR code will always be able to be generated from the shortened form of the URL.
 
 Note: Due to the privacy implications, a standard URL shortening service SHOULD NOT be used.
+
+#### Redirecting Back to Sender
+
+##### Summary
+Describes how receiving party of out-of-band invitation can redirect back to sender application once protocol execution is over.
+
+##### Motivation
+In some cases, interaction between sender and receiver of out-of-band invitation would require receiver application to redirect back to sender.
+
+For example,
+* A web based verifier sends out-of-band invitation to a holder application and requests redirect back once present proof protocol execution is over, so that it can show credential verification results and guide the user with next steps.
+* A verifier mobile application sending deep link of its mobile application to an agent based mobile wallet application requesting redirect to verifier mobile application.
+
+These redirects may not be required in many cases, for example,
+* A mobile application scanning QR code from sender and performing protocol execution. In this case the mobile application may choose to handle successful protocol execution in its own way and close the application.
+
+
+##### Reference
+During the protocol execution sender can securely send [`web-redirect`](https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator) info as part of messages concluding protocol executions like [acknowledgement and problem report](problems.md).
+Once protocol is ended then receiver can optionally choose to redirect by extracting the redirect information from the message.
+
+Example acknowledgement message from verifier to prover containing web redirect information.
+```json
+{
+  "type":"https://didcomm.org/present-proof/3.0/ack",
+  "id":"e2f3747b-41e8-4e46-abab-ba51472ab1c3",
+  "pthid":"95e63a5f-73e1-46ac-b269-48bb22591bfa",
+  "from":"did:example:verifier",
+  "to":["did:example:prover"],
+  "web-redirect":{
+    "status":"OK",
+    "redirectUrl":"https://example.com/handle-success/51e63a5f-93e1-46ac-b269-66bb22591bfa"
+  }
+}
+```
+
+Problem report with web redirect header from [Problem Reports Example](#problem-reports) will look like,
+```json
+{
+  "type": "https://didcomm.org/report-problem/2.0/problem-report",
+  "id": "7c9de639-c51c-4d60-ab95-103fa613c805",
+  "pthid": "1e513ad4-48c9-444e-9e7e-5b8b45c5e325",
+  "web-redirect":{
+      "status":"FAIL",
+      "redirectUrl":"https://example.com/handle-error/99e80a9f-34e1-41ac-b277-91bb64481bxb"
+   },
+  "body": {
+    "code": "e.p.xfer.cant-use-endpoint",
+    "comment": "Unable to use the {1} endpoint for {2}.",
+    "args": [
+      "https://agents.r.us/inbox",
+      "did:sov:C805sNYhMrjHiqZDTUASHg"
+    ]
+  }
+}
+```
+
+A sender MUST use ``web-redirect`` headers to request redirect from receiver. A ``web-redirect`` header MUST contain ``status`` and ``redirectUrl`` properties. 
+The value of ``status`` property MUST be one of the Acknowledgement statuses defined [here](https://github.com/hyperledger/aries-rfcs/blob/main/features/0015-acks/README.md#ack-status) which indicates protocol execution outcome.
+
+
+
+
+
