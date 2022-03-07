@@ -2,7 +2,7 @@
 
 # DIDComm Messaging
 
-DIDComm messaging, is a secure messaging protocol built atop of [decentralized identifiers](https://w3c.github.io/did-core/). DIDComm messages are JSON based leveraging the secure messaging format of JWM (JSON Web Message) which is a [IETF draft](https://github.com/mattrglobal/jwm) to expand the [JOSE](https://datatracker.ietf.org/group/jose/documents/) (Javascript object signing and encryption) family of specifications for the purposes of secure messaging.
+DIDComm messaging is a secure messaging protocol built atop of [decentralized identifiers](https://w3c.github.io/did-core/). DIDComm messages are JSON based leveraging the secure messaging format of JWM (JSON Web Message) which is a [IETF draft](https://github.com/mattrglobal/jwm) to expand the [JOSE](https://datatracker.ietf.org/group/jose/documents/) (Javascript object signing and encryption) family of specifications for the purposes of secure messaging.
 
 ## Terminology
 
@@ -94,7 +94,7 @@ For digital signatures the following algorithms MUST be supported.
 
 |Algorithm(JWA)               |Description                                                         |
 |-----------------------------|--------------------------------------------------------------------|
-|EdDSA (with crv=Ed25519)     |Elliptic curve digital signature with edwards curves and SHA-512    |
+|EdDSA (with crv=Ed25519)     |Elliptic curve digital signature with Edwards curves and SHA-512    |
 |ES256                        |Elliptic curve digital signature with NIST p-256 curve and SHA-256  |
 
 

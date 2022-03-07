@@ -2,7 +2,7 @@
 
 #### URL & QR Codes
 
-When passing a DIDComm Message between two parties, it is often useful to present a message in the form of a URL or encoded into the form of a QR code for scanning with a smartphone or other camera. The format for a QR code is simply the encoded URL form of a message.
+When passing a DIDComm message between two parties, it is often useful to present a message in the form of a URL or encoded into the form of a QR code for scanning with a smartphone or other camera. The format for a QR code is simply the encoded URL form of a message.
 
 ##### Privacy Considerations
 
@@ -20,7 +20,7 @@ The `id` of the message passed in a URL or a QR code is used to as the `pthid` o
 
 Each message passed this way must be contained within an `out-of-band` message, as described below.
 
-The out-of-band protocol a single message that is sent by the *sender*.
+The out-of-band protocol consists in a single message that is sent by the *sender*.
 
 #### Invitation: `https://didcomm.org/out-of-band/2.0/invitation`
 
@@ -194,7 +194,7 @@ These redirects may not be required in many cases, for example,
 
 
 ##### Reference
-During the protocol execution sender can securely send [`web-redirect`](https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator) info as part of messages concluding protocol executions like [acknowledgement and problem report](problems.md).
+During the protocol execution sender can securely send [`web-redirect`](https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator) info as part of messages concluding protocol executions, like [a formal acknowledgement message](#acks) or a [problem report](#problem-reports).
 Once protocol is ended then receiver can optionally choose to redirect by extracting the redirect information from the message.
 
 Example acknowledgement message from verifier to prover containing web redirect information.
