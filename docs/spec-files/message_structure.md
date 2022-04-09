@@ -161,9 +161,9 @@ Each attachment is described with an instance of a JSON object that has the foll
 
 - `id`: [optional but recommended] Identifies attached content within the scope of a given message, so it can be referenced. For example, in a message documenting items for sale on an auction website, there might be a field named `front_view` that contains the value `#attachment1`; this would reference an attachment to the message with `id` equal to `attachment1`. If omitted, then there is no way to refer to the attachment later in the thread, in error messages, and so forth. Because the `id` of an attachment is used to compose URIs, this value should be brief and MUST consist entirely of [unreserved URI characters](https://datatracker.ietf.org/doc/html/rfc3986/#section-2.3) – meaning that it is not necessary to [percent encode](https://en.wikipedia.org/wiki/Percent-encoding) the value to incorporate it in a URI.
 - `description`: [optional] A human-readable description of the content.
-- `filename`: A hint about the name that might be used if this attachment is persisted as a file. It is not required, and need not be unique. If this field is present and `media_type` is not, the extension on the filename may be used to infer a MIME type.
-- `media_type`: [optional] Describes the media type of the attached content.
-- `format`: [optional] Further describes the format of the attachment if the `media_type` is not sufficient.
+- `filename`: A hint about the name that might be used if this attachment is persisted as a file. It is not required, and need not be unique. If this field is present and `media-type` is not, the extension on the filename may be used to infer a MIME type.
+- `media-type`: [optional] Describes the media type of the attached content.
+- `format`: [optional] Further describes the format of the attachment if the `media-type` is not sufficient.
 - `lastmod_time`: [optional] A hint about when the content in this attachment was last modified.
 - `data`: A JSON object that gives access to the actual content of the attachment. Contains enough of the following subfields to allow access to the data:
     * `jws`: [optional] A [JWS](https://tools.ietf.org/html/rfc7515) in [detached content mode](https://tools.ietf.org/html/rfc7515#appendix-F), where the `payload` field of the JWS maps to `base64` or to something fetchable via `links`. This allows attachments to be signed. The signature need not come from the author of the message.
@@ -204,7 +204,7 @@ Each attachment is described with an instance of a JSON object that has the foll
         },{
 			"id": "x",
             "description": "example encrypted DIDComm message as attachment",
-            "media_type": "application/didcomm-encrypted+json",
+            "media-type": "application/didcomm-encrypted+json",
             "data": {
             	"json": {
                     //jwe json structure

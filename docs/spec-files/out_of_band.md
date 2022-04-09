@@ -41,7 +41,7 @@ The out-of-band protocol consists in a single message that is sent by the *sende
   "attachments": [
     {
         "@id": "request-0",
-        "mime-type": "application/json",
+        "media-type": "application/json",
         "data": {
             "json": "<json of protocol message>"
         }
@@ -108,7 +108,7 @@ Invitation:
   "attachments": [
       {
           "@id": "request-0",
-          "mime-type": "application/json",
+          "media-type": "application/json",
           "data": {
               "json": "<json of protocol message>"
           }
