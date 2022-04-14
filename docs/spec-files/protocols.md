@@ -28,14 +28,14 @@ Example PIURIs might be:
 
 ```
 https://didcomm.org/lets_do_lunch/1.0
-http://example.com/protocols?which=lets_do_lunch/1.0
+https://example.com/protocols?which=lets_do_lunch/1.0
 https://github.com/hyperledger/aries-toolbox/tree/master/docs/admin-invitations/0.1
 ```
 
 The goals of the PIURI are, in descending priority:
 
 * Code can use the URI to route messages to protocol
-  handlers using [semver rules](semver.md). [TODO: ADD SEMVER]
+  handlers using [semver rules](semver.md).
 
 * The definition of a protocol is tied to the URI such
   that it is semantically stable. This means that once version 1.0
@@ -84,8 +84,8 @@ The goals of the MTURI are, in descending priority:
 Example Message Type URIs:
 
 ```
-http://example.com/protocols?which=lets_do_lunch/1.0/proposal
-http://example.com/protocols/lets_do_lunch/1.0/proposal
+https://example.com/protocols?which=lets_do_lunch/1.0/proposal
+https://example.com/protocols/lets_do_lunch/1.0/proposal
 did:example:1234567890;spec/trust_ping/1.0/ping
 https://github.com/hyperledger/aries-toolbox/tree/master/docs/admin-invitations/0.1/create-invitation
 ```
