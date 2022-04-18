@@ -188,6 +188,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <h3 id="message-headers"><a class="toc-anchor" href="#message-headers" >§</a> Message Headers</h3>
 <p>A DIDComm plaintext message conveys most of its application-level data inside a JSON <code>body</code> object that is a direct child of the message root. The structure inside <code>body</code> is predicted by the value of the message’s <code>type</code> attribute, and varies according to the definition of the protocol-specific message in question. Each <code>type</code> of message has its own schema for <code>body</code>.</p>
 <p>However, some attributes are common to many different message types. When metadata about a message means the same thing regardless of context, and when it is susceptible to generic rather than message-specific handling, that metadata can be placed in <strong>headers</strong>. Headers are siblings of <code>body</code> and may be added to any message type. They are encrypted and decrypted (and/or signed and verified) along with <code>body</code> and therefore have an identical audience.</p>
+<p>If headers need to be sent and there is no message to attach them to, an <a href="#the-empty-message" >empty message</a> may be sent.</p>
 <p>Headers in DIDComm Messaging are intended to be extensible in much the same way that headers in HTTP or SMTP are extensible. A few headers are predefined:</p>
 <ul>
 <li>
@@ -234,8 +235,6 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <li>However, a header value SHOULD NOT require interpretation over and above ordinary JSON parsing. Prefer JSON structure to specialized string DSLs like the one that encodes media type preferences in an HTTP <code>Accept</code> header. (<a path-0="tools.ietf.org"path-1="html"path-2="draft-ietf-httpbis-header-structure-15"href="https://tools.ietf.org/html/draft-ietf-httpbis-header-structure-15" >HTTP Structured Headers</a> provide similar functionality but are unnecessary here, since plaintext messages already have an easily parseable syntax.)</li>
 <li>Headers that are only meaningful together SHOULD be grouped into a JSON object.</li>
 </ul>
-<h3 id="the-empty-message"><a class="toc-anchor" href="#the-empty-message" >§</a> The Empty Message</h3>
-<p>Sometimes, only headers need to be communicated; there is no content for the body. DIDComm explicitly defines a <a path-0="github.com"path-1="hyperledger"path-2="aries-rfcs"path-3="tree"path-4="main"path-5="concepts"path-6="0003-protocols#message-type-and-protocol-identifier-uris"href="https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0003-protocols#message-type-and-protocol-identifier-uris" >message type</a>, <code>https://didcomm.org/reserved/2.0/empty</code> for this purpose. This message MUST include an actual <code>body</code> element; its value MUST be an empty JSON object.</p>
 <h3 id="attachments"><a class="toc-anchor" href="#attachments" >§</a> Attachments</h3>
 <p>It is common for DIDComm messages to supplement formalized structure with arbitrary data — images, documents, or types of media not yet invented. Such content is “attached” to DIDComm messages in much the same way that attachments work in email.</p>
 <p>Attachments are contained within a list in the <code>attachments</code> header.</p>
@@ -637,8 +636,16 @@ In addition, DIDComm defines optional implementation usage of the draft <a path-
 <p><a href="#threading" >Threading</a> has some implicit built-in ACK semantics. In a two-party protocol that consists of message types mapping unambiguously to progressive steps, each message that moves forward is an implicit ACK of the message that preceded it.</p>
 <p>When <a href="#problem-reports" >DIDComm <code>problem-report</code>s</a> constitute reactions to a preceding message (as opposed to when they signal problems in external circumstances), they also function as an ACK.</p>
 <p>However, more explicit and more powerful ACKs are sometimes needed. They can prove that parties have a shared view of state at a particular time, test the functioning of a transport, help debug surprising silence, fine-tune timeouts, and speed up remedial action.</p>
-<p>To facilitate this, any innermost DIDComm plaintext message MAY use the <code>please_ack</code> header to politely request a read receipt from a recipient. The header’s value is an array of strings that clarify when the ACK is requested. Only the following value is defined by this version of the spec: “receipt”. Future extensions may define additional values (e.g., to implement read receipts, or to request an ACK if no other response is forthcoming after a modest delay). If “receipt” is present, then the request is to ACK as soon as the message is received.</p>
-<p>The presence of the <code>please_ack</code> header does not create an obligation on the part of the recipient. However, cooperative parties who wish to honor such a request MUST include an <code>ack</code> header on a subsequent message, where the value of the header is an array that contains the <code>id</code> of one or more messages being acknowledged. Values in this array MUST appear in the order received, from oldest to most recent.</p>
+<p>To facilitate this, any innermost DIDComm plaintext message MAY use the <code>please_ack</code> header to politely request acknowledgment from a recipient. The header’s value is an array of strings that clarify when the ACK is requested, and what should be ACKed. In this version of the spec, the request is always to ACK as soon as the message is received, and each string in the array is the ID of a message that needs acknowledgment. For terseness, the empty string may be used in the array to mean “the current message.”</p>
+<p>For example, suppose Alice is running a rich chat protocol, has previously sent two messages with IDs <code>abc</code> and <code>def</code>, and now wants to send a new message with ID <code>xyz</code>, plus request an acknowledgement of the old ones. Her new message might include this header:</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"please_ack"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"abc"</span><span class="token punctuation">,</span> <span class="token string">"def"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>There is no need to include the empty string (or <code>xyz</code>) in this array, since any response that honors this request is an implicit ACK of <code>xyz</code>.</p>
+<p>The appropriate response to an ACK request for the <em>current</em> message is the next natural message in the protocol, with an <code>ack</code> header added. The appropriate response to an ACK request for an <em>old</em> message ID is whatever response it triggered, if any – with an <code>ack</code> header added. Thus, if Bob had already sent message <code>ghi</code> after receiving Alice’s <code>abc</code> and <code>def</code>, he could resend <code>ghi</code> with the following <code>ack</code> header:</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"ack"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"abc"</span><span class="token punctuation">,</span> <span class="token string">"def"</span><span class="token punctuation">,</span> <span class="token string">"xyz"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>This allows agents to collaborate to recover from a response that was emitted but lost. Future extensions may define additional values (e.g., to implement read receipts, or to request an ACK if no other response is forthcoming after a modest delay).</p>
+<p>The presence of the <code>please_ack</code> header does not create an obligation on the part of the recipient. However, cooperative parties who wish to honor such a request MUST include an <code>ack</code> header on a subsequent message, where the value of the header is an array that contains the <code>id</code> of one or more messages being acknowledged. Values in this array MUST appear in the order <em>received</em> by whoever is acknowledging, from oldest to most recent.</p>
 <blockquote>
 <p>Note: The <code>please_ack</code> header SHOULD NOT be included on <a href="#routing" ><code>forward</code> messages</a>, and MUST NOT be honored by mediators. It is only for use between ultimate senders and receivers; otherwise, it would add a burden of sourceward communication to mediators, which are defined to send only destward. It would also undermine the privacy of recipients.</p>
 </blockquote>
@@ -835,19 +842,19 @@ In addition, DIDComm defines optional implementation usage of the draft <a path-
 <p>Each transport MUST define:</p>
 <ul>
 <li>format of <code>serviceEndpoint</code> <code>uri</code>: Which URI schemes are used (if URI), or the properties of the object (if object).</li>
-<li>how to actually send messages:  e.g., through HTTP POST, through dial protocol (libp2p), etc.</li>
+<li>how to actually send messages:  e.g., through HTTPS POST, through dial protocol (libp2p), etc.</li>
 <li>how mime-types of the content are provided, e.g., through Content-Type header, etc.</li>
 <li>where additional context definition is hosted, e.g., in case the <code>serviceEndpoint</code>  object has extra properties specific to the transport.</li>
 </ul>
 <h3 id="reference"><a class="toc-anchor" href="#reference" >§</a> Reference</h3>
-<h4 id="https"><a class="toc-anchor" href="#https" >§</a> HTTP(S)</h4>
-<p>HTTP(S) transports are an effective way to send a message to another online agent.</p>
+<h4 id="https"><a class="toc-anchor" href="#https" >§</a> HTTPS</h4>
+<p>HTTPS transports are an effective way to send a message to another online agent.</p>
 <ul>
-<li>Messages are transported via HTTP POST.</li>
+<li>Messages are transported via HTTPS POST.</li>
 <li>The MIME Type for the POST request is set to the corresponding media type defined in <a href="#media-types" >Media Types</a>, e.g., <code>application/didcomm-encrypted+json</code>.</li>
-<li>A successful message receipt MUST return a code in the 2xx HTTP Status Code range. It is recommended that a HTTP POST should return a 202 Accepted status code.</li>
+<li>A successful message receipt MUST return a code in the 2xx HTTPS Status Code range. It is recommended that a HTTPS POST should return a 202 Accepted status code.</li>
 <li>POST requests are transmit only. Messages are only sent from the code that submitted the POST request.</li>
-<li>HTTP Redirects SHOULD be followed. Only Temporary Redirects (307) are acceptable. Permanent endpoint relocation should be managed with a DID Document update.</li>
+<li>HTTPS Redirects SHOULD be followed. Only Temporary Redirects (307) are acceptable. Permanent endpoint relocation should be managed with a DID Document update.</li>
 <li>Using HTTPS with TLS 1.2 or greater with a forward secret cipher will provide Perfect Forward Secrecy (PFS) on the transmission leg.</li>
 </ul>
 <h4 id="websocket"><a class="toc-anchor" href="#websocket" >§</a> WebSocket</h4>
@@ -858,7 +865,7 @@ In addition, DIDComm defines optional implementation usage of the draft <a path-
 <li>The trust of each message comes from the Encryption Envelope, not the socket connection itself.</li>
 <li>Websockets are considered transmit only. Messages flow only from the agent that opened the socket.</li>
 <li>Using Secure Websockets (wss://) with TLS 1.2 or greater with a forward secret cipher will provide Perfect Forward Secrecy (PFS) on the transmission leg.</li>
-<li>When using STOMP over WebSocket, the content-type header is application/didcomm-enc-env as in the HTTP(S) message.</li>
+<li>When using STOMP over WebSocket, the content-type header is application/didcomm-enc-env as in the HTTPS message.</li>
 </ul>
 <h2 id="protocols"><a class="toc-anchor" href="#protocols" >§</a> Protocols</h2>
 <p>DIDComm serves as a foundational layer for the development of application-level protocols that benefit from the features it provides. This simplifies the development of high-trust protocols for dedicated purposes, and allows them to be composed into higher-level workflows in arbitrary, powerful ways, regardless of whether institutions, humans, or IoT devices are playing a given role.</p>
@@ -1076,7 +1083,7 @@ Please see <a href="#message-types" >Message Types</a> for details about media t
   &quot;id&quot;: &quot;&lt;id used for context as pthid&gt;&quot;,
   &quot;from&quot;:&quot;&lt;sender's did&gt;&quot;,
   &quot;body&quot;: {
-    &quot;goal-code&quot;: &quot;issue-vc&quot;,
+    &quot;goal_code&quot;: &quot;issue-vc&quot;,
     &quot;goal&quot;: &quot;To issue a Faber College Graduate credential&quot;,
     &quot;accept&quot;: [
       &quot;didcomm/v2&quot;,
@@ -1086,7 +1093,7 @@ Please see <a href="#message-types" >Message Types</a> for details about media t
   &quot;attachments&quot;: [
     {
         &quot;@id&quot;: &quot;request-0&quot;,
-        &quot;mime-type&quot;: &quot;application/json&quot;,
+        &quot;mime_type&quot;: &quot;application/json&quot;,
         &quot;data&quot;: {
             &quot;json&quot;: &quot;&lt;json of protocol message&gt;&quot;
         }
@@ -1099,12 +1106,12 @@ Please see <a href="#message-types" >Message Types</a> for details about media t
 <li><code>type</code> - the DIDComm message type</li>
 <li><code>id</code> - the unique ID of the message. The ID should be used as the <strong>parent</strong> thread ID (<code>pthid</code>) for the response message, rather than the more common thread ID (<code>thid</code>) of the response message. This enables multiple uses of a single out-of-band message.</li>
 <li><code>from</code> - the DID representing the sender to be used by recipients for future interactions.</li>
-<li><code>goal-code</code> - [optional] a self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.</li>
+<li><code>goal_code</code> - [optional] a self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.</li>
 <li><code>goal</code> - [optional] a self-attested string that the receiver may want to display to the user about the context-specific goal of the out-of-band message.</li>
 <li><code>accept</code> - [optional] an array of media (aka mime) types in the order of preference of the sender that the receiver can use in responding to the message.
 If <code>accept</code> is not specified, the receiver uses its preferred choice to respond to the message.
 Please see <a href="#message-types" >Message Types</a> for details about media types.</li>
-<li><code>attachments</code> - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated <code>goal</code> and <code>goal-code</code>. Only one of the messages should be chosen and acted upon.
+<li><code>attachments</code> - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated <code>goal</code> and <code>goal_code</code>. Only one of the messages should be chosen and acted upon.
 <ul>
 <li>While the JSON form of the attachment is used in the example above, the sender could choose to use the base64 form.</li>
 </ul>
@@ -1135,13 +1142,13 @@ Please see <a href="#message-types" >Message Types</a> for details about media t
   <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"69212a3a-d068-4f9d-a2dd-4741bca89af3"</span><span class="token punctuation">,</span>
   <span class="token property">"from"</span><span class="token operator">:</span> <span class="token string">"did:example:alice"</span><span class="token punctuation">,</span>
   <span class="token property">"body"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-      <span class="token property">"goal-code"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+      <span class="token property">"goal_code"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
       <span class="token property">"goal"</span><span class="token operator">:</span> <span class="token string">""</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token property">"attachments"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
           <span class="token property">"@id"</span><span class="token operator">:</span> <span class="token string">"request-0"</span><span class="token punctuation">,</span>
-          <span class="token property">"mime-type"</span><span class="token operator">:</span> <span class="token string">"application/json"</span><span class="token punctuation">,</span>
+          <span class="token property">"media_type"</span><span class="token operator">:</span> <span class="token string">"application/json"</span><span class="token punctuation">,</span>
           <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
               <span class="token property">"json"</span><span class="token operator">:</span> <span class="token string">"&lt;json of protocol message>"</span>
           <span class="token punctuation">}</span>
@@ -1150,10 +1157,10 @@ Please see <a href="#message-types" >Message Types</a> for details about media t
 <span class="token punctuation">}</span>
 </code></pre>
 <p>Whitespace removed:</p>
-<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span><span class="token property">"type"</span><span class="token operator">:</span><span class="token string">"https://didcomm.org/out-of-band/2.0/invitation"</span><span class="token punctuation">,</span><span class="token property">"id"</span><span class="token operator">:</span><span class="token string">"69212a3a-d068-4f9d-a2dd-4741bca89af3"</span><span class="token punctuation">,</span><span class="token property">"from"</span><span class="token operator">:</span><span class="token string">"did:example:alice"</span><span class="token punctuation">,</span><span class="token property">"body"</span><span class="token operator">:</span><span class="token punctuation">{</span><span class="token property">"goal-code"</span><span class="token operator">:</span><span class="token string">""</span><span class="token punctuation">,</span><span class="token property">"goal"</span><span class="token operator">:</span><span class="token string">""</span><span class="token punctuation">}</span><span class="token punctuation">,</span><span class="token property">"attachments"</span><span class="token operator">:</span><span class="token punctuation">[</span><span class="token punctuation">{</span><span class="token property">"@id"</span><span class="token operator">:</span><span class="token string">"request-0"</span><span class="token punctuation">,</span><span class="token property">"mime-type"</span><span class="token operator">:</span><span class="token string">"application/json"</span><span class="token punctuation">,</span><span class="token property">"data"</span><span class="token operator">:</span><span class="token punctuation">{</span><span class="token property">"json"</span><span class="token operator">:</span><span class="token string">"&lt;json of protocol message>"</span><span class="token punctuation">}</span><span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span><span class="token property">"type"</span><span class="token operator">:</span><span class="token string">"https://didcomm.org/out-of-band/2.0/invitation"</span><span class="token punctuation">,</span><span class="token property">"id"</span><span class="token operator">:</span><span class="token string">"69212a3a-d068-4f9d-a2dd-4741bca89af3"</span><span class="token punctuation">,</span><span class="token property">"from"</span><span class="token operator">:</span><span class="token string">"did:example:alice"</span><span class="token punctuation">,</span><span class="token property">"body"</span><span class="token operator">:</span><span class="token punctuation">{</span><span class="token property">"goal_code"</span><span class="token operator">:</span><span class="token string">""</span><span class="token punctuation">,</span><span class="token property">"goal"</span><span class="token operator">:</span><span class="token string">""</span><span class="token punctuation">}</span><span class="token punctuation">,</span><span class="token property">"attachments"</span><span class="token operator">:</span><span class="token punctuation">[</span><span class="token punctuation">{</span><span class="token property">"@id"</span><span class="token operator">:</span><span class="token string">"request-0"</span><span class="token punctuation">,</span><span class="token property">"media_type"</span><span class="token operator">:</span><span class="token string">"application/json"</span><span class="token punctuation">,</span><span class="token property">"data"</span><span class="token operator">:</span><span class="token punctuation">{</span><span class="token property">"json"</span><span class="token operator">:</span><span class="token string">"&lt;json of protocol message>"</span><span class="token punctuation">}</span><span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
 </code></pre>
 <p>Base 64 URL Encoded:</p>
-<pre class="language-text"><code class="language-text">eyJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsLWNvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ
+<pre class="language-text"><code class="language-text">eyJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsX2NvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtZWRpYV90eXBlIjoiYXBwbGljYXRpb24vanNvbiIsImRhdGEiOnsianNvbiI6Ijxqc29uIG9mIHByb3RvY29sIG1lc3NhZ2U-In19XX0
 </code></pre>
 <p>Example URL:</p>
 <pre class="language-text"><code class="language-text">https://example.com/path?_oob=eyJ0eXBlIjoiaHR0cHM6Ly9kaWRjb21tLm9yZy9vdXQtb2YtYmFuZC8yLjAvaW52aXRhdGlvbiIsImlkIjoiNjkyMTJhM2EtZDA2OC00ZjlkLWEyZGQtNDc0MWJjYTg5YWYzIiwiZnJvbSI6ImRpZDpleGFtcGxlOmFsaWNlIiwiYm9keSI6eyJnb2FsLWNvZGUiOiIiLCJnb2FsIjoiIn0sImF0dGFjaG1lbnRzIjpbeyJAaWQiOiJyZXF1ZXN0LTAiLCJtaW1lLXR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZGF0YSI6eyJqc29uIjoiPGpzb24gb2YgcHJvdG9jb2wgbWVzc2FnZT4ifX1dfQ
@@ -1212,7 +1219,7 @@ Knowledge is Good
 <li>A mobile application scanning QR code from sender and performing protocol execution. In this case the mobile application may choose to handle successful protocol execution in its own way and close the application.</li>
 </ul>
 <h5 id="reference-2"><a class="toc-anchor" href="#reference-2" >§</a> Reference</h5>
-<p>During the protocol execution sender can securely send <a path-0="github.com"path-1="hyperledger"path-2="aries-rfcs"path-3="tree"path-4="main"path-5="concepts"path-6="0700-oob-through-redirect#web-redirect-decorator"href="https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator" ><code>web-redirect</code></a> info as part of messages concluding protocol executions, like <a href="#acks" >a formal acknowledgement message</a> or a <a href="#problem-reports" >problem report</a>.
+<p>During the protocol execution sender can securely send <a path-0="github.com"path-1="hyperledger"path-2="aries-rfcs"path-3="tree"path-4="main"path-5="concepts"path-6="0700-oob-through-redirect#web-redirect-decorator"href="https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator" ><code>web_redirect</code></a> info as part of messages concluding protocol executions, like <a href="#acks" >a formal acknowledgement message</a> or a <a href="#problem-reports" >problem report</a>.
 Once protocol is ended then receiver can optionally choose to redirect by extracting the redirect information from the message.</p>
 <p>Example acknowledgement message from verifier to prover containing web redirect information.</p>
 <pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
@@ -1221,7 +1228,7 @@ Once protocol is ended then receiver can optionally choose to redirect by extrac
   <span class="token property">"pthid"</span><span class="token operator">:</span><span class="token string">"95e63a5f-73e1-46ac-b269-48bb22591bfa"</span><span class="token punctuation">,</span>
   <span class="token property">"from"</span><span class="token operator">:</span><span class="token string">"did:example:verifier"</span><span class="token punctuation">,</span>
   <span class="token property">"to"</span><span class="token operator">:</span><span class="token punctuation">[</span><span class="token string">"did:example:prover"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
-  <span class="token property">"web-redirect"</span><span class="token operator">:</span><span class="token punctuation">{</span>
+  <span class="token property">"web_redirect"</span><span class="token operator">:</span><span class="token punctuation">{</span>
     <span class="token property">"status"</span><span class="token operator">:</span><span class="token string">"OK"</span><span class="token punctuation">,</span>
     <span class="token property">"redirectUrl"</span><span class="token operator">:</span><span class="token string">"https://example.com/handle-success/51e63a5f-93e1-46ac-b269-66bb22591bfa"</span>
   <span class="token punctuation">}</span>
@@ -1232,7 +1239,7 @@ Once protocol is ended then receiver can optionally choose to redirect by extrac
   <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"https://didcomm.org/report-problem/2.0/problem-report"</span><span class="token punctuation">,</span>
   <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"7c9de639-c51c-4d60-ab95-103fa613c805"</span><span class="token punctuation">,</span>
   <span class="token property">"pthid"</span><span class="token operator">:</span> <span class="token string">"1e513ad4-48c9-444e-9e7e-5b8b45c5e325"</span><span class="token punctuation">,</span>
-  <span class="token property">"web-redirect"</span><span class="token operator">:</span><span class="token punctuation">{</span>
+  <span class="token property">"web_redirect"</span><span class="token operator">:</span><span class="token punctuation">{</span>
       <span class="token property">"status"</span><span class="token operator">:</span><span class="token string">"FAIL"</span><span class="token punctuation">,</span>
       <span class="token property">"redirectUrl"</span><span class="token operator">:</span><span class="token string">"https://example.com/handle-error/99e80a9f-34e1-41ac-b277-91bb64481bxb"</span>
    <span class="token punctuation">}</span><span class="token punctuation">,</span>
@@ -1246,7 +1253,7 @@ Once protocol is ended then receiver can optionally choose to redirect by extrac
   <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>A sender MUST use <code>web-redirect</code> headers to request redirect from receiver. A <code>web-redirect</code> header MUST contain <code>status</code> and <code>redirectUrl</code> properties.
+<p>A sender MUST use <code>web_redirect</code> headers to request redirect from receiver. A <code>web_redirect</code> header MUST contain <code>status</code> and <code>redirectUrl</code> properties.
 The value of <code>status</code> property MUST be one of the Acknowledgement statuses defined <a path-0="github.com"path-1="hyperledger"path-2="aries-rfcs"path-3="blob"path-4="main"path-5="features"path-6="0015-acks"path-7="README.md#ack-status"href="https://github.com/hyperledger/aries-rfcs/blob/main/features/0015-acks/README.md#ack-status" >here</a> which indicates protocol execution outcome.</p>
 <h3 id="discover-features-protocol-20"><a class="toc-anchor" href="#discover-features-protocol-20" >§</a> Discover Features Protocol 2.0</h3>
 <p>This protocol helps agents query one another to discover which features
@@ -2016,7 +2023,6 @@ gains by virtue of the properties of the DIDComm messages. A ping and response v
 <li><a href="#simple-vs-structured" >Simple vs. Structured</a></li>
 </ul>
 </li>
-<li><a href="#the-empty-message" >The Empty Message</a></li>
 <li><a href="#attachments" >Attachments</a>
 <ul>
 <li><a href="#attachment-example" >Attachment Example</a></li>
@@ -2100,7 +2106,7 @@ gains by virtue of the properties of the DIDComm messages. A ping and response v
 <li><a href="#transport-requirements" >Transport Requirements</a></li>
 <li><a href="#reference" >Reference</a>
 <ul>
-<li><a href="#https" >HTTP(S)</a></li>
+<li><a href="#https" >HTTPS</a></li>
 <li><a href="#websocket" >WebSocket</a></li>
 </ul>
 </li>
