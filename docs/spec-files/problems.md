@@ -18,7 +18,7 @@ DIDComm Messaging provides several tools that let one party acknowledge messages
 
 [Threading](#threading) has some implicit built-in ACK semantics. In a two-party protocol that consists of message types mapping unambiguously to progressive steps, each message that moves forward is an implicit ACK of the message that preceded it. 
 
-When [DIDComm `problem-report`s](#problem-reports) constitute reactions to a preceding message (as opposed to when they signal problems in external circumstances), they also function as an ACK.
+When [DIDComm problem reports](#problem-reports) constitute reactions to a preceding message (as opposed to when they signal problems in external circumstances), they also function as an ACK.
 
 However, more explicit and more powerful ACKs are sometimes needed. They can prove that parties have a shared view of state at a particular time, test the functioning of a transport, help debug surprising silence, fine-tune timeouts, and speed up remedial action.
 
@@ -40,7 +40,7 @@ The appropriate response to an ACK request for the *current* message is the next
 
 This allows agents to collaborate to recover from a response that was emitted but lost. Future extensions may define additional values (e.g., to implement read receipts, or to request an ACK if no other response is forthcoming after a modest delay).
 
-The presence of the `please_ack` header does not create an obligation on the part of the recipient. However, cooperative parties who wish to honor such a request MUST include an `ack` header on a subsequent message, where the value of the header is an array that contains the `id` of one or more messages being acknowledged. Values in this array MUST appear in the order *received* by whoever is acknowledging, from oldest to most recent.
+The presence of the `please_ack` header does not create an obligation on the part of the recipient. However, cooperative parties who wish to honor such a request SHOULD include an `ack` header on a subsequent message, where the value of the header is an array that contains the `id` of one or more messages being acknowledged. Values in this array MUST appear in the order *received* by whoever is acknowledging, from oldest to most recent.
 
 >Note: The `please_ack` header SHOULD NOT be included on [`forward` messages](#routing), and MUST NOT be honored by mediators. It is only for use between ultimate senders and receivers; otherwise, it would add a burden of sourceward communication to mediators, which are defined to send only destward. It would also undermine the privacy of recipients.
 
@@ -54,7 +54,7 @@ Particular protocols may wish to design their own message types that convey addi
 
 Any DIDComm message that continues a previously begun application-level protocol MUST use a `thid` property that associates it with the prior context. This context is vital for error handling. See [Threading](#threading).
 
-In addition, messages MAY use the [Advanced Sequencing](../../extensions/advanced_sequencing/main.md) extension to detect gaps in delivery or messages arriving out of order.
+In addition, messages MAY use the [Advanced Sequencing](https://github.com/decentralized-identity/didcomm-messaging/blob/master/extensions/advanced_sequencing/main.md) extension to detect gaps in delivery or messages arriving out of order.
 
 ### Problem reports
 
@@ -80,23 +80,23 @@ Other entities are notified of problems by sending a simple message called a **p
 }
 ```
 
-The `pthid` header MUST be included with problem reports. Its value is the `thid` of the thread in which the problem occurred. (Thus, the problem report begins a new child thread, of which the triggering context is the parent. The parent context can react immediately to the problem, or can suspend progress while troubleshooting occurs.)
+- `pthid` - REQUIRED. The value is the `thid` of the thread in which the problem occurred. (Thus, the problem report begins a new child thread, of which the triggering context is the parent. The parent context can react immediately to the problem, or can suspend progress while troubleshooting occurs.)
 
-The `ack` header SHOULD be included if the problem in question was triggered directly by a preceding message. (Contrast problems arising from a timeout or a user deciding to cancel a transaction, which can arise independent of a preceding message. In such cases, `ack` MAY still be used, but there is no strong recommendation.) 
+- `ack` - OPTIONAL. It SHOULD be included if the problem in question was triggered directly by a preceding message. (Contrast problems arising from a timeout or a user deciding to cancel a transaction, which can arise independent of a preceding message. In such cases, `ack` MAY still be used, but there is no strong recommendation.) 
 
-The `code` field is worthy of its own section; [see below](#problem-codes).
+- `code` - REQUIRED. Deserves a rich explanation; see [Problem Codes](#problem-codes) below.
 
-The optional `comment` field contains human-friendly text describing the problem. The text MUST be statically associated with `code`, meaning that each time circumstances trigger a problem with the same `code`, the value of `comment` will be the same. This enables [localization](#i18n) and cached lookups, and it has some [cybersecurity benefits](https://didcomm.org/book/v2/problems-and-cybersecurity). The value of `comment` supports simple interpolation with `args` (see next), where args are referenced as `{1}`, `{2}`, and so forth. 
+- `comment` - OPTIONAL but recommended. Contains human-friendly text describing the problem. If the field is present, the text MUST be statically associated with `code`, meaning that each time circumstances trigger a problem with the same `code`, the value of `comment` will be the same. This enables [localization](#i18n) and cached lookups, and it has some [cybersecurity benefits](https://didcomm.org/book/v2/problems-and-cybersecurity). The value of `comment` supports simple interpolation with `args` (see next), where args are referenced as `{1}`, `{2}`, and so forth. 
 
-The optional `args` field contains situation-specific values that are interpolated into the value of `comment`, providing extra detail for human readers. Each unique problem code has a definition for the args it takes. In this example, `e.p.xfer.cant-use-endpoint` apparently expects two values in `args`: the first is a URL and the second is a DID. Missing or null args MUST be replaced with a question mark character (`?`) during interpolation; extra args MUST be appended to the main text as comma-separated values. 
+- `args` - OPTIONAL. Contains situation-specific values that are interpolated into the value of `comment`, providing extra detail for human readers. Each unique problem code has a definition for the args it takes. In this example, `e.p.xfer.cant-use-endpoint` apparently expects two values in `args`: the first is a URL and the second is a DID. Missing or null args MUST be replaced with a question mark character (`?`) during interpolation; extra args MUST be appended to the main text as comma-separated values. 
 
-The optional `escalate_to` field provides a URI where additional help on the issue can be received.
+- `escalate_to` - OPTIONAL. Provides a URI where additional help on the issue can be received.
 
 #### Problem Codes
 
 Perhaps the most important feature of each problem report message is its `code` field. This required value is the main piece of data that recipient software uses to automate reactions. It categorizes what went wrong.
 
-Problem codes are lower kabob-case. They are structured as a sequence of tokens delimited by the dot character `.`, with the tokens being more general to the left, and more specific to the right. Because recipients can do matching by prefix instead of full string, a recipient can recognize and handle broad semantics even if the trailing tokens of the string contain unfamiliar details. In the example below, for example, relatively sophisticated handling is possible even if a recipient only recognizes the `e.p.xfer.` portion of the code.
+Problem codes are lower kebab-case. They are structured as a sequence of tokens delimited by the dot character `.`, with the tokens being more general to the left, and more specific to the right. Because recipients can do matching by prefix instead of full string, a recipient can recognize and handle broad semantics even if the trailing tokens of the string contain unfamiliar details. In the example below, for example, relatively sophisticated handling is possible even if a recipient only recognizes the `e.p.xfer.` portion of the code.
 
 ![problem code structure](../collateral/problem-code-structure.png)
 
@@ -111,7 +111,7 @@ The leftmost component of a problem code is its **sorter**. This is a single cha
 
 ##### Scope
 
-Reading left to right, the next token in a problem code is called the **scope**. This gives the sender's opinion about how much context should be undone if the problem is deemed an error.
+Reading left to right, the second token in a problem code is called the **scope**. This gives the sender's opinion about how much context should be undone if the problem is deemed an error.
 
 >Note: A problem always sorts according to the most pessimistic view that is taken by participants in the protocol. If the sender of a problem report deems it an error, then it is. If the sender deems it a warning, but a recipient with greater context decides that it clearly frustrates their goals, then it becomes an error; see [Replying to Warnings](#replying-to-warnings). Thus, *scope* is relevant even if the sender chooses a problem code that starts with `w`.)
 
@@ -125,7 +125,7 @@ The possible values of *scope* are:
 
 ##### Descriptors
 
-After the *sorter* and the *scope*, problem codes consist of one or more **descriptors**. These are kabob-case tokens separated by the `.` character, where the semantics get progressively more detailed reading left to right. Senders of problem reports SHOULD include at least one descriptor in their problem code, and SHOULD use the most specific descriptor they can. Recipients MAY specialize their reactions to problems in a very granular way, or MAY examine only a prefix of a problem code.
+After the *sorter* and the *scope*, problem codes consist of one or more **descriptors**. These are kebab-case tokens separated by the `.` character, where the semantics get progressively more detailed reading left to right. Senders of problem reports SHOULD include at least one descriptor in their problem code, and SHOULD use the most specific descriptor they can. Recipients MAY specialize their reactions to problems in a very granular way, or MAY examine only a prefix of a problem code.
 
 The following descriptor tokens are defined. They can be used by themselves, or as prefixes to more specific descriptors. Additional descriptors &mdash; particularly more granular ones &mdash; may be defined in individual protocols.
 
@@ -144,7 +144,7 @@ Token | Value of `comment` string | Notes
 
 #### Replying to Warnings
 
-When Alice sends a `w.*` problem report to Bob, and Bob decides that the warning is actually an error, he SHOULD reply to Alice to let her know about the consequences of his evaluation. Bob's reply is another `problem-report` message. It looks very similar to Alice's original, except:
+When Alice sends a `w.*` problem report to Bob, and Bob decides that the warning is actually an error, he SHOULD reply to Alice to let her know about the consequences of his evaluation. Bob's reply is another [problem report](#problem-reports). It looks very similar to Alice's original message, except:
 
 * The `code` in Bob's message now begins with `e.`. The remainder of the code MAY (often will be) identical, but this is not required; if Bob knows more details than Alice did, he SHOULD provide them. The *scope* in Bob's code MUST be at least as broad as the scope in Alice's original message. (For example, Bob MUST NOT use scope `m` to say the protocol continues with only a bad message ignored, if Alice's original warning said she considered the scope to be `p`.)
 * The `args` property may or may not match.  
@@ -154,7 +154,7 @@ When Alice sends a `w.*` problem report to Bob, and Bob decides that the warning
 
 Many problems may be experienced during a long-running or complex protocol. Implementers must have the option of tolerating and recovering from them, if we want robustness; perhaps several network retries will be followed by eventual success. However, care must be exercised to prevent situations where malformed or careless problem reports trigger infinite recursion or vicious cycles: 
 
-1. Implementations SHOULD consider implementing a [circuit breaker design pattern](https://codecraft.co/2013/01/11/dont-forget-the-circuit-breakers/) to prevent this problem.
+1. Implementations SHOULD consider implementing a [circuit breaker design pattern](https://en.wikipedia.org/wiki/Circuit_breaker_design_pattern) to prevent this problem.
 1. [Timeouts](#timeouts) SHOULD be used judiciously.
 1. Implementations SHOULD use their own configuration or judgment to establish some type of max error count as they begin a protocol instance. This limit could be protocol-specific, and could be evaluated per unit time (e.g., in a human chat protocol of infinite duration, perhaps the limit is max errors per hour rather than max errors across all time). If implementations establish such a limit, they SHOULD check to see whether this count has been exceeded, both when they receive and when they emit errors. If the limit is crossed as a result of a problem report they *receive*, they SHOULD send back a problem report with `"code": "e.p.req.max-errors-exceeded"` to abort the protocol. If the limit is crossed as a result of an error they are emitting, they MUST NOT emit the problem report for the triggering error; instead, they MUST emit a problem report with `"code": "e.p.req.max-errors-exceeded"` to abort the protocol. In either case, they MUST cease responding to messages that use the `thid` of that protocol instance, once this limit has been crossed.
 
@@ -164,7 +164,7 @@ To troubleshoot routing issues, DIDComm offers a header, `trace`. Any party that
 
 ```json
 {
-  "@type": "https://didcomm.org/trace/1.0/trace_report",
+  "type": "https://didcomm.org/trace/1.0/trace_report",
   "pthid": "98fd8d72-80f6-4419-abc2-c65ea39d0f38.1",
   "handler": "did:example:1234abcd#3",
   "traced_type": "https://didcomm.org/route/1.0/forward",
@@ -173,7 +173,9 @@ To troubleshoot routing issues, DIDComm offers a header, `trace`. Any party that
 
 The value of `pthid` is always the message ID that triggered the trace. The value of `handler` is an arbitrary string that identifies the agent, service, or piece of software responding to the trace.
 
->Note: This mechanism is not intended to profile timing or performance, and thus does not cover the same problem space as technologies like [OpenTracing](https://opentracing.io/). It also *spans* trust domains (paralleling a message's journey from Alice to a web service hosting Bob's endpoint, to Bob himself) &mdash; and thus differs in scope from in-house logging and monitoring technolgies like Splunk and Kibana. Although DIDComm tracing could be integrated with these other technologies, doing so in a methodical way is probably an antipattern; it may indicate a misunderstanding about its purpose as a tool for ad hoc debugging or troubleshooting between unrelated parties.
+For the sake of consistency, this message uses some structural conventions that match a DIDComm plaintext message. However, it need not be understood as a message in a DIDComm protocol. It can be parsed by any consumer of generic JSON, it can be transmitted using any channel that suits the sender and receiver, and it is not associated with any interaction state. 
+
+>Note: This mechanism is not intended to profile timing or performance, and thus does not cover the same problem space as technologies like [OpenTracing](https://opentracing.io/). It also *spans* trust domains (paralleling a message's journey from Alice to a web service hosting Bob's endpoint, to Bob himself) &mdash; and thus differs in scope from in-house logging and monitoring technolgies like Splunk and Logstash/Kibana. Although DIDComm tracing could be integrated with these other technologies, doing so in a methodical way is probably an antipattern; it may indicate a misunderstanding about its purpose as a tool for ad hoc debugging or troubleshooting between unrelated parties.
 
 For example, in a message for Bob that is double-wrapped (once for his external mediator and once for his cloud agent), three plaintext messages might contain `trace` headers:
 

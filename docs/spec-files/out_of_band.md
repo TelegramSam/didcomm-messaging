@@ -4,7 +4,7 @@
 
 When passing a DIDComm message between two parties, it is often useful to present a message in the form of a URL or encoded into the form of a QR code for scanning with a smartphone or other camera. The format for a QR code is simply the encoded URL form of a message.
 
-##### Privacy Considerations
+#### Privacy Considerations
 
 Any information passed via a URL or QR code is unencrypted, and may be observed by another party. This lack of privacy must be minded in two different ways.
 
@@ -12,17 +12,15 @@ First, no private information may be passed in the message. Private information 
 
 Second, any identifiers passed in a message sent via URL or QR code must no longer be considered private. Any DID used or other identifier no longer considered private MUST be rotated over a secure connection if privacy is required.
 
-##### Message Correlation
+#### Message Correlation
 
-The `id` of the message passed in a URL or a QR code is used to as the `pthid` on a response sent by the recipient of this message. The response recipient can use the `pthid` to correlate it with the original message.
+The `id` of the message passed in a URL or a QR code is used as the `pthid` on a response sent by the recipient of this message. The response recipient can use the `pthid` to correlate it with the original message.
 
-##### Messages
+#### Invitation
 
 Each message passed this way must be contained within an `out-of-band` message, as described below.
 
 The out-of-band protocol consists in a single message that is sent by the *sender*.
-
-#### Invitation: `https://didcomm.org/out-of-band/2.0/invitation`
 
 ```jsonc
 {
@@ -39,7 +37,7 @@ The out-of-band protocol consists in a single message that is sent by the *sende
   },
   "attachments": [
     {
-        "@id": "request-0",
+        "id": "request-0",
         "mime_type": "application/json",
         "data": {
             "json": "<json of protocol message>"
@@ -51,20 +49,19 @@ The out-of-band protocol consists in a single message that is sent by the *sende
 
 The items in the message are:
 
-- `type` - the DIDComm message type
-- `id` - the unique ID of the message. The ID should be used as the **parent** thread ID (`pthid`) for the response message, rather than the more common thread ID (`thid`) of the response message. This enables multiple uses of a single out-of-band message.
-- `from` - the DID representing the sender to be used by recipients for future interactions.
-- `goal_code` - [optional] a self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.
-- `goal` - [optional] a self-attested string that the receiver may want to display to the user about the context-specific goal of the out-of-band message.
-- `accept` - [optional] an array of media (aka mime) types in the order of preference of the sender that the receiver can use in responding to the message.
+- `type` - REQUIRED. The header conveying the DIDComm [MTURI](#message-type-uri).
+- `id` - REQUIRED. This value MUST be used as the **parent** thread ID (`pthid`) for the response message that follows. This may feel counter-intuitive &mdash; why not it in the `thid` of the response instead? The answer is that putting it in `pthid` enables multiple, independent interactions (threads) to be triggered from a single out-of-band invitation.
+- `from` - REQUIRED for OOB usage. The DID representing the sender to be used by recipients for future interactions.
+- `goal_code` - OPTIONAL. A self-attested code the receiver may want to display to the user or use in automatically deciding what to do with the out-of-band message.
+- `goal` - OPTIONAL. A self-attested string that the receiver may want to display to the user about the context-specific goal of the out-of-band message.
+- `accept` - OPTIONAL. An array of media types in the order of preference of the sender that the receiver can use in responding to the message.
  If `accept` is not specified, the receiver uses its preferred choice to respond to the message.
   Please see [Message Types](#message-types) for details about media types.
-- `attachments` - an array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated `goal` and `goal_code`. Only one of the messages should be chosen and acted upon.
-  - While the JSON form of the attachment is used in the example above, the sender could choose to use the base64 form.
+- `attachments` - REQUIRED for OOB usage. An array of attachments that will contain the invitation messages in order of preference that the receiver can use in responding to the message. Each message in the array is a rough equivalent of the others, and all are in pursuit of the stated `goal` and `goal_code`. Only one of the messages should be chosen and acted upon. (While the JSON form of the attachment is used in the example above, the sender could choose to use the base64 form.)
 
 When encoding a message in a URL or QR code, the _sender_ does not know which protocols are supported by the _recipient_ of the message. Encoding multiple alternative messages is a form of optimistic protocol negotiation that allows multiple supported protocols without coordination
 
-##### Standard Message Encoding
+#### Standard Message Encoding
 
 Using a standard message encoding allows for easier interoperability between multiple projects and software platforms. Using a URL for that standard encoding provides a built in fallback flow for users who are unable to automatically process the message. Those new users will load the URL in a browser as a default behavior, and may be presented with instructions on how to install software capable of processing the message. Already onboarded users will be able to process the message without loading in a browser via mobile app URL capture, or via capability detection after being loaded in a browser.
 
@@ -80,7 +77,7 @@ https://<domain>/<path>?_oob=<encodedplaintextjwm>
 
 > `_oob` is a shortened form of Out of Band, and was chosen to not conflict with query parameter names in use at a particular domain. When the query parameter is detected, it may be assumed to be an Out Of Band message with a reasonably high confidence.
 
-> To do: We need to rationalize this approach `https://` approach with the use of a special protocol (e.g. `didcomm://`) that will enable handling of the URL on mobile devices to automatically invoke an installed app on both Android and iOS. A user must be able to process the out-of-band message on the device of the agent (e.g. when the mobile device can't scan the QR code because it is on a web page on device).
+> When this spec was written, the `didcomm://` URL scheme was in active use for deep linking in mobile apps, and had features that intersect with the OOB protocol described here. That scheme is defined elsewhere; we only note it here to advise against its overloading for other purposes.
 
 The `<encodedplaintextjwm>` is a JWM plaintext message that has been base64-url encoded.
 
@@ -105,7 +102,7 @@ Invitation:
   },
   "attachments": [
       {
-          "@id": "request-0",
+          "id": "request-0",
           "media_type": "application/json",
           "data": {
               "json": "<json of protocol message>"
@@ -118,7 +115,7 @@ Invitation:
 Whitespace removed:
 
 ```json
-{"type":"https://didcomm.org/out-of-band/2.0/invitation","id":"69212a3a-d068-4f9d-a2dd-4741bca89af3","from":"did:example:alice","body":{"goal_code":"","goal":""},"attachments":[{"@id":"request-0","media_type":"application/json","data":{"json":"<json of protocol message>"}}]}
+{"type":"https://didcomm.org/out-of-band/2.0/invitation","id":"69212a3a-d068-4f9d-a2dd-4741bca89af3","from":"did:example:alice","body":{"goal_code":"","goal":""},"attachments":[{"id":"request-0","media_type":"application/json","data":{"json":"<json of protocol message>"}}]}
 ```
 
 Base 64 URL Encoded:
@@ -158,18 +155,15 @@ Knowledge is Good
 
 Example URL encoded as a QR Code:
 
-![Example QR Code](.//collateral/out_of_band_exampleqr.png)
+![Example QR Code](./collateral/out_of_band_exampleqr.png)
 
-##### Short URL Message Retrieval
+#### Short URL Message Retrieval
 
 It seems inevitable that the length of some DIDComm messages will be too long to produce a useable QR code. Techniques to avoid unusable QR codes have been presented above, including using attachment links for requests, minimizing the routing of the response and eliminating unnecessary whitespace in the JSON. However, at some point a _sender_ may need generate a very long URL. In that case, a short URL message retrieval redirection should be implemented by the sender as follows:
 
 - The sender should generate and track a GUID for the out-of-band message URL.
-- The shortened version should be:
-  - `https://example.com/path?_oobid=5f0e3ffb-3f92-4648-9868-0d6f8889e6f3`
-  - Note the replacement of the query parameter `_oob` with `_oobid` when using shortened URL.
-- On receipt of this form of message, the agent must do an HTTP GET to retrieve the associated encoded  message.
-  - A sender may want to wait to generate the full invitation until the redirection event of the shortened URL to the full length form dynamic, so a single QR code can be used for distinct messages.
+- The shortened version should be: `https://example.com/path?_oobid=5f0e3ffb-3f92-4648-9868-0d6f8889e6f3`. Note the replacement of the query parameter `_oob` with `_oobid` when using shortened URL.
+- On receipt of this form of message, the agent must do an HTTP GET to retrieve the associated encoded message. A sender may want to wait to generate the full invitation until the redirection event of the shortened URL to the full length form dynamic, so a single QR code can be used for distinct messages.
 
 A usable QR code will always be able to be generated from the shortened form of the URL.
 
@@ -177,10 +171,6 @@ Note: Due to the privacy implications, a standard URL shortening service SHOULD 
 
 #### Redirecting Back to Sender
 
-##### Summary
-Describes how receiving party of out-of-band invitation can redirect back to sender application once protocol execution is over.
-
-##### Motivation
 In some cases, interaction between sender and receiver of out-of-band invitation would require receiver application to redirect back to sender.
 
 For example,
@@ -192,10 +182,11 @@ These redirects may not be required in many cases, for example,
 
 
 ##### Reference
-During the protocol execution sender can securely send [`web_redirect`](https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator) info as part of messages concluding protocol executions, like [a formal acknowledgement message](#acks) or a [problem report](#problem-reports).
+During the protocol execution sender can securely send [`web_redirect`](https://github.com/hyperledger/aries-rfcs/tree/main/concepts/0700-oob-through-redirect#web-redirect-decorator) information as part of messages concluding protocol executions, like [a formal acknowledgement message](#acks) or a [problem report](#problem-reports).
 Once protocol is ended then receiver can optionally choose to redirect by extracting the redirect information from the message.
 
-Example acknowledgement message from verifier to prover containing web redirect information.
+Example acknowledgement message from verifier to prover containing web redirect information:
+
 ```json
 {
   "type":"https://didcomm.org/present-proof/3.0/ack",
@@ -210,7 +201,7 @@ Example acknowledgement message from verifier to prover containing web redirect 
 }
 ```
 
-Problem report with web redirect header from [Problem Reports Example](#problem-reports) will look like,
+A problem report with a web redirect header from the [problem report example](#problem-reports) will look like:
 ```json
 {
   "type": "https://didcomm.org/report-problem/2.0/problem-report",
@@ -233,8 +224,3 @@ Problem report with web redirect header from [Problem Reports Example](#problem-
 
 A sender MUST use ``web_redirect`` headers to request redirect from receiver. A ``web_redirect`` header MUST contain ``status`` and ``redirectUrl`` properties. 
 The value of ``status`` property MUST be one of the Acknowledgement statuses defined [here](https://github.com/hyperledger/aries-rfcs/blob/main/features/0015-acks/README.md#ack-status) which indicates protocol execution outcome.
-
-
-
-
-

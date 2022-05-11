@@ -2,7 +2,7 @@
 
 A DIDComm message can be signed, either in conjunction with encryption, or independently (e.g., if the message will remain unencrypted).
 
-If a message is signed and encrypted to add non-repudiation, it must be signed prior to encryption. This is known as a [nested JWM](https://tools.ietf.org/html/draft-looker-jwm-01#section-1.2).
+If a message is signed and encrypted to add non-repudiation, it MUST be signed prior to encryption. This is known as a [nested JWM](https://tools.ietf.org/html/draft-looker-jwm-01#section-1.2).
 
 #### Algorithms
 
@@ -13,42 +13,36 @@ Implementations MUST be able to verify all of the following algorithms and MUST 
 | Algorithm(JWA)           | Description                                                  |
 | ------------------------ | ------------------------------------------------------------ |
 | EdDSA (with crv=Ed25519) | Elliptic curve digital signature with Edwards curves and SHA-512 |
-| ES256                    | Elliptic curve digital signature with NIST p-256 curve and SHA-256 |
+| ES256                    | Elliptic curve digital signature with NIST p-256 curve and SHA-256 (deprecated) |
 | ES256K                   | Elliptic curve digital signature with Secp256k1 keys.        |
 
 #### Construction
 
-Construct a JWS with the following header:
+Construct a JWS with a header like the following (substituting an appropriate `kid` value that encodes a key from the [`authentication` section of the signer's DID document](https://www.w3.org/TR/did-core/#authentication)):
 
 ```json
    {"typ":"JWM",
-    "kid":"Ef1sFuyOozYm3CEY4iCdwqxiSyXZ5Br-eUDdQXk6jaQ",
+    "kid":"did:example:123#DhPHHNNMSHPcaSgNpjjsBYpMMjsTdSzC9ByQ8aJs8vrNXy",
     "alg":"ES256"}
 ```
 
-The JWS payload is the Base64url encoded JWM.
+The `kid` MUST be a DID URI that refers to a key specified as an authorization key.
+
+The JWS payload (not shown above) is the Base64url encoded JWM.
 
 When transmitted in a normal JWM fashion, the JSON Serialization MUST be used.
 
 #### Verification
 
-When verifying the signature, an additional check must be performed after verifying the JWS. The key used in the signature must be authorized to do so in the document resolved from the DID in the `from` attribute. If the key is not authorized for the signature, the signature is invalid.
+When verifying the signature, an additional check must be performed (ideally, before verifying the JWS). The key used in the signature must be authorized to authenticate the sender by appearing in the `authentication` section of the document resolved from the DID in the `from` attribute. If this check fails, the signature is inappropriate and MUST be rejected, regardless of its cryptographic correctness.
 
 #### Uses of Signatures
 
-##### Non-Repudiation
+* Non-Repudiation: DIDComm Encrypted messages are repudiable. If non-repudiation is required for a particular protocol message, the message MUST be signed before encryption. 
 
-DIDComm Encrypted messages are repudiable. If non-repudiation is required for a particular protocol message, the message MUST be signed before encryption. 
+* Tamper Resistance: Messages that are shared without encrypting (e.g., [Out of Band Invitations](#invitation) may be signed to provide tamper resistance.
 
-##### Tamper Resistant OOB Messages
-
-Out of Band Messages may be signed to provide tamper resistance.
-
-##### DID Anchoring
-
-Signing can allow DIDs to be anchored via keys not usable for encrypting DIDComm messages.
-
-#### Examples
+* DID Anchoring: Some types of cryptographic keys support signing but not encrypting. Signed DIDComm messages allow the use of DIDs that are controlled with such keys.
 
 See section [Appendix C.2.](#c2-didcomm-signed-messages) for examples.
 
