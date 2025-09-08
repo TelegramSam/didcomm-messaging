@@ -101,6 +101,15 @@ The following example shows common elements of a DIDComm plaintext message.
 
 The equivalent CBOR encoding would represent the same data structure but in the more compact CBOR binary format. The CBOR map would use the same keys and value types as the JSON structure.
 
+## Encoding Detection
+As messages may be both JSON or CBOR encoded. the text of a plaintext message can be inspected with first byte checking.
+
+JSON messages MUST always begin with a first byte of `0x7B` ASCII `{`.
+
+CBOR messages MUST always begin with a first byte value between `0x80` and `0xFF`.
+
+Other first byte values are not valid at this time.
+
 ### Message Headers
 
 A DIDComm plaintext message conveys most of its application-level data inside a JSON `body` object that is a direct child of the message root. The structure inside `body` is predicted by the value of the message's `type` attribute, and varies according to the definition of the protocol-specific message in question. Each `type` of message has its own schema for `body`. 
